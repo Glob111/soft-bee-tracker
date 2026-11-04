@@ -173,7 +173,7 @@ Migrations use 14-digit UTC timestamps: `YYYYMMDDHHmmss_description.sql`. All ta
 
 - **ESLint** + **Prettier** — run `yarn lint` before committing
 - **Husky** pre-commit hooks via lint-staged
-- **CI** (`.github/workflows/ci.yml`) — lint, unit tests, build, secret-leak scan and Playwright safeguards on every PR
+- **CI** (`.github/workflows/ci.yml`) — lint, unit tests, build, secret-leak scan and Playwright safeguards on every PR; a parallel `db` job applies all migrations + seeds to a clean database, checks the test accounts and fails if `src/types/supabase-schema.ts` is out of date
 - Path alias: `@/*` → `src/*`
 
 ## Agent / contributor docs
