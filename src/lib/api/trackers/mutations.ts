@@ -15,11 +15,7 @@ interface UseCreateTrackerOptions {
 
 export async function createTracker(input: CreateTrackerInput): Promise<Tracker> {
   const supabase = createBrowserClient();
-  const { data, error, status } = await supabase
-    .from('trackers')
-    .insert(mapCreateTrackerInputToRow(input))
-    .select('*')
-    .single();
+  const { data, error, status } = await supabase.from('trackers').insert(mapCreateTrackerInputToRow(input)).select('*').single();
 
   if (error) {
     throw {
