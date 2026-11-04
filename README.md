@@ -17,21 +17,25 @@ Production Next.js application for crew time tracking, project management, and r
 ## Prerequisites
 
 - Node.js 20+
-- npm or Yarn 4
+- Yarn 4 (`corepack enable`; version pinned in `package.json`)
 - [Supabase CLI](https://supabase.com/docs/guides/cli) (for local DB and type generation)
 
 ## Getting started
 
 ```bash
 # Install dependencies
-npm install
+yarn install
 
 # Copy environment template and fill in values
 cp .example.env .env
 
 # Start the dev server (Turbopack)
-npm run dev
+yarn dev
 ```
+
+Restart `yarn dev` after editing `.env` — env files are read at startup. `.env` is gitignored; never commit it.
+
+To develop against local Supabase (`supabase start`), create `.env.local` with `NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321` and the publishable and secret keys printed by `supabase status`. Next.js loads `.env.local` after `.env`, so it overrides the hosted values; delete it to switch back.
 
 Open [http://localhost:3000](http://localhost:3000).
 
@@ -47,21 +51,21 @@ SUPABASE_SECRET_KEY=your-service-role-key
 
 | Variable | Description |
 |----------|-------------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase API URL, exactly `https://<project-ref>.supabase.co` (local: `http://127.0.0.1:54321`) |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public anon key (browser + server client) |
-| `SUPABASE_SECRET_KEY` | Service role key (server-only admin operations) |
+| `SUPABASE_SECRET_KEY` | Service role key — server-only, used only by `createServiceClient()` in `src/lib/supabase/server.ts`. Never prefix it with `NEXT_PUBLIC_`. |
 
 ## Scripts
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start development server |
-| `npm run build` | Production build |
-| `npm run start` | Serve production build |
-| `npm run lint` | Run ESLint |
-| `npm run lint:fix` | Auto-fix ESLint issues |
-| `npm run test` | Run the Vitest test suite |
-| `npm run sb:db:types` | Regenerate `src/types/supabase-schema.ts` from local Supabase |
+| `yarn dev` | Start development server |
+| `yarn build` | Production build |
+| `yarn start` | Serve production build |
+| `yarn lint` | Run ESLint |
+| `yarn lint:fix` | Auto-fix ESLint issues |
+| `yarn test` | Run the Vitest test suite |
+| `yarn sb:db:types` | Regenerate `src/types/supabase-schema.ts` from local Supabase |
 
 ## Project structure
 
@@ -109,7 +113,7 @@ Components import hooks from `@/lib/api/<feature>`. They must not call Supabase,
 
 | Concern | Where |
 |---------|-------|
-| Project and project-rate async state | Zustand stores in `lib/api/<feature>/store.ts` |
+| Project, project-rate, and auth-profile async state | Zustand stores in `lib/api/<feature>/store.ts` or `<operation>.store.ts` |
 | Cached server data | TanStack Query hooks in `lib/api/**` |
 | Ephemeral UI state | Zustand stores in `features/<name>/store/` |
 | Auth mutations | `useSignIn`, `useSignUp`, `useSignOut` in `lib/api/auth` |
@@ -132,27 +136,49 @@ supabase start
 supabase db push
 
 # Regenerate TypeScript types after schema changes
-npm run sb:db:types
+yarn sb:db:types
 ```
 
 Migrations use 14-digit UTC timestamps: `YYYYMMDDHHmmss_description.sql`. All tables must have RLS enabled. See `.cursor/rules/supabase-db.mdc` for policy conventions.
 
 ## Code quality
 
-- **ESLint** + **Prettier** — run `npm run lint` before committing
+- **ESLint** + **Prettier** — run `yarn lint` before committing
 - **Husky** pre-commit hooks via lint-staged
 - Path alias: `@/*` → `src/*`
 
-## Agent / contributor docs
+## AI agent setup
+
+Each team member configures their own AI tool. Every tool reads the same project rules (structure, commands, style, data access, and secrets) from its own instruction file:
+
+| Tool | Instruction files |
+|------|-------------------|
+| Claude Code | `CLAUDE.md` |
+| Codex and other `AGENTS.md`-aware agents | `AGENTS.md`, `CODEX.md` |
+| Cursor | `.cursor/rules/*.mdc` |
+| Windsurf | `.windsurfrules` |
+
+Detailed Cursor rules, referenced by the other files:
 
 | File | Purpose |
 |------|---------|
 | `.cursor/rules/ai-standing-orders.mdc` | Global coding standards |
 | `.cursor/rules/state-manager.mdc` | TanStack Query + Zustand patterns |
 | `.cursor/rules/lib-services.mdc` | `lib/api` module layout |
+| `.cursor/rules/components-ui.mdc` | Component and UI conventions |
+| `.cursor/rules/app-nextjs.mdc` | App Router page conventions |
+| `.cursor/rules/supabase-db.mdc` | Migrations, RLS, and Postgres functions |
 | `.cursor/rules/naming-conventions.mdc` | File and folder naming (`kebab-case`) |
-| `CLAUDE.md` | Claude-specific standing orders |
 | `epics/` | Feature epics (auth, tracker, workspace layout) |
+
+When you change a shared rule, update every instruction file that states it so the tools stay in agreement.
+
+### Verify your setup
+
+1. `yarn install && yarn test` passes.
+2. `yarn dev` starts and `/login` loads without a Supabase env error.
+3. `git status` does not list `.env`.
+4. Ask your agent: *"What are this repo's rules for data access and secrets?"* The answer should mention importing from `@/lib/api/<entity>` only, no direct Supabase or `fetch` calls in UI, and that `SUPABASE_SECRET_KEY` is server-only.
 
 ## Planned routes
 

@@ -38,6 +38,14 @@
 - Follow `.cursor/rules/supabase-db.mdc` for migrations and RLS.
 - Role checks in RLS must use JWT helpers (`private.is_manager_or_admin()`, `private.jwt_role()`), never `select … from public.users` for role.
 
+## Secrets and environments (strict)
+
+- Keep local secrets in `.env` (gitignored by `.env` and `.env.*`); `.example.env` lists variable names only, never values.
+- Never commit, log, print, or paste secret values. Agents must not read or echo `.env` values; when debugging, check only whether each variable is set.
+- `SUPABASE_SECRET_KEY` is server-only: read it only in `createServiceClient()` in `src/lib/supabase/server.ts`. Never import `lib/supabase/server` from `"use client"` modules or from `lib/supabase/client`.
+- Never expose a secret through a `NEXT_PUBLIC_*` variable; only the Supabase URL and anon key are public.
+- Each developer works against their own environment (local Supabase via `supabase start` or a personal dev project). Do not run migrations or write SQL against shared or production projects without team agreement.
+
 ## Safety
 
 - Ask before changing auth, security-sensitive behavior, or database schema.

@@ -49,7 +49,7 @@ alwaysApply: true
 
 - No direct data calls inside React components, pages, layouts, or render paths.
 - Never call `fetch`, raw API utilities, or Supabase client methods directly from UI components.
-- Client-side data access must go through dedicated TanStack Query hooks.
+- Client-side data access must go through the domain's public TanStack Query hook or Zustand store exported from `src/lib/api/<entity>/index.ts`; use the state owner already established for that domain, never both.
 - Server components must use dedicated server-side data helpers/actions.
 - In this repo, place data access abstractions under `lib/api/**` and shared fetch logic under `lib/**`.
 - Follow **state-manager.mdc** for TanStack Query + Zustand architecture and **lib-services.mdc** for `lib/api` folder layout.
@@ -63,6 +63,8 @@ src/lib/api/users/
   index.ts       # barrel — re-export public API only
   queries.ts     # query key factory, pure fetch helpers, useQuery hooks
   mutations.ts   # pure write helpers, useMutation hooks
+  get-users.store.ts    # optional — Zustand read state/action (Zustand-backed domains)
+  create-user.store.ts  # optional — Zustand create state/action; split independent lifecycles
   types.ts       # optional — request/response interfaces when non-trivial
   mappers.ts     # optional — DB row ↔ domain mapping
 ```
@@ -72,7 +74,8 @@ src/lib/api/users/
 - **`mutations.ts`**: async write functions (no React in helpers), `use*` mutation hooks, cache invalidation via `useQueryClient`, and `sonner` toasts on error. Add `'use client'` when hooks are present.
 - Pure fetch/mutation helpers must not import React; hooks are thin wrappers that call those helpers.
 - Throw `{ message, statusCode? } satisfies ApiError` from helpers; use `src/types/api-error.ts`.
-- Components, pages, and layouts import hooks only from `@/lib/api/<feature>` — never call Supabase or `fetch` directly.
+- Components, pages, and layouts import hooks and stores only from `@/lib/api/<feature>` — never call Supabase or `fetch` directly.
+- Zustand stores must expose typed state/actions and normalize failures to `ApiError`; do not combine independent get/create lifecycles in one store.
 
 ## Supabase client and auth SSR (strict)
 
@@ -91,6 +94,14 @@ src/lib/api/users/
 - If `any` or `unknown` is unavoidable, add a short inline justification comment.
 - `any`/`unknown` are allowed in unit tests when they improve test ergonomics/readability.
 
+## Secrets and environments (strict)
+
+- Keep local secrets in `.env` (gitignored by `.env` and `.env.*`); `.example.env` lists variable names only, never values.
+- Never commit, log, print, or paste secret values. Agents must not read or echo `.env` values; when debugging, check only whether each variable is set.
+- `SUPABASE_SECRET_KEY` is server-only: read it only in `createServiceClient()` in `src/lib/supabase/server.ts`. Never import `lib/supabase/server` from `"use client"` modules or from `lib/supabase/client`.
+- Never expose a secret through a `NEXT_PUBLIC_*` variable; only the Supabase URL and anon key are public.
+- Each developer works against their own environment (local Supabase via `supabase start` or a personal dev project). Do not run migrations or write SQL against shared or production projects without team agreement.
+
 ## Safety and approval boundaries
 
 - Ask for approval before changing database schema, auth flow, RLS model, or security-sensitive code.
@@ -99,6 +110,6 @@ src/lib/api/users/
 
 ## Verification and delivery
 
-- Run the smallest relevant checks (`eslint`, targeted tests, or typecheck) after changes.
+- Run the smallest relevant checks (`yarn test`, targeted `eslint`, or typecheck) after changes.
 - If checks are not run, state exactly which checks were skipped and why.
 - Summaries must include what changed, why, and any residual risk.

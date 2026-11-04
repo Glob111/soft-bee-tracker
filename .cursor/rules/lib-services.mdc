@@ -22,7 +22,7 @@ alwaysApply: false
 
 # Query and mutation patterns
 
-- Client-side data access goes through TanStack Query hooks colocated in `lib/api/<feature>/`.
+- Client-side data access goes through TanStack Query hooks or Zustand stores colocated in `lib/api/<feature>/`; use the state owner already established for that domain, never both.
 - Server-side data access uses dedicated helpers/actions, not ad hoc calls from components.
 - See **state-manager.mdc** for TanStack Query + Zustand patterns, hook templates, and cache invalidation rules.
 
@@ -34,7 +34,8 @@ Each domain gets a kebab-case folder under `src/lib/api/`. Example — `users/`:
 src/lib/api/users/
   index.ts       # barrel — re-export public API
   queries.ts     # query key factory, read helpers, useQuery hooks
-  mutations.ts     # write helpers, useMutation hooks
+  mutations.ts   # write helpers, useMutation hooks
+  *.store.ts     # optional — Zustand state/actions (Zustand-backed domains, one per independent lifecycle)
   types.ts       # optional — request/response interfaces
   mappers.ts     # optional — DB row ↔ domain mapping
 ```
@@ -46,6 +47,7 @@ src/lib/api/users/
 | `index.ts` | Re-exports from `queries.ts`, `mutations.ts`, and optional `types.ts`. This is the only import path components use (`@/lib/api/users`). |
 | `queries.ts` | `userKeys` factory, pure async read functions, `useUsers` / `useUser` hooks. `'use client'` when hooks are exported. |
 | `mutations.ts` | Pure async write functions, `useUpdateUser` / `useCreateUser` hooks, `queryClient.invalidateQueries`, `toast.error` on failure. `'use client'` when hooks are exported. |
+| `*.store.ts` | Zustand-backed domains only (e.g. `projects`, `project-rates`, `auth` profile). Typed state/actions that call the pure helpers and normalize failures to `ApiError`. Split independent get/create lifecycles into separate stores. |
 
 ### Rules
 

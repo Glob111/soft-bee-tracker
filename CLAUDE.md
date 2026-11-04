@@ -181,6 +181,14 @@ src/lib/api/users/
 - If `any` or `unknown` is unavoidable, add a short inline justification comment.
 - `any`/`unknown` are allowed in unit tests when they improve test ergonomics/readability.
 
+## Secrets and environments (strict)
+
+- Keep local secrets in `.env` (gitignored by `.env` and `.env.*`); `.example.env` lists variable names only, never values.
+- Never commit, log, print, or paste secret values. Agents must not read or echo `.env` values; when debugging, check only whether each variable is set.
+- `SUPABASE_SECRET_KEY` is server-only: read it only in `createServiceClient()` in `src/lib/supabase/server.ts`. Never import `lib/supabase/server` from `"use client"` modules or from `lib/supabase/client`.
+- Never expose a secret through a `NEXT_PUBLIC_*` variable; only the Supabase URL and anon key are public.
+- Each developer works against their own environment (local Supabase via `supabase start` or a personal dev project). Do not run migrations or write SQL against shared or production projects without team agreement.
+
 ## Safety and approval boundaries
 
 - Ask for approval before changing database schema, auth flow, RLS model, or security-sensitive code.
