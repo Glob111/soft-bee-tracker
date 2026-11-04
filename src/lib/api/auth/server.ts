@@ -1,3 +1,5 @@
+import 'server-only';
+
 import { createServerClient } from '@/lib/supabase/server';
 import { mapUserRowToProfile } from '@/lib/api/auth/mappers';
 import type { UserProfile } from '@/lib/api/auth/types';

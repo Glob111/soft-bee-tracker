@@ -8,7 +8,15 @@
     "lint:fix": "eslint . --fix",
     "lint:ci": "eslint . --max-warnings 0",
     "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "prepare": "husky",
     "sb:db:types": "supabase gen types typescript --local | tail +1 > src/types/supabase-schema.ts"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,mjs}": [
+      "eslint --fix"
+    ]
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -36,6 +44,7 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@tailwindcss/postcss": "^4.3.0",
     "@types/node": "25.9.2",
     "@types/react": "19.2.17",
