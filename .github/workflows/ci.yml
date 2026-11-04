@@ -79,7 +79,6 @@ jobs:
             echo "Error: SUPABASE_SECRET_KEY value leaked into client-delivered output"
             exit 1
           fi
-          # Not grepping the variable name: @supabase/* JSDoc mentions it and may survive bundling.
           if search_client_output -E "sb_secret_[A-Za-z0-9_-]+"; then
             echo "Error: Supabase secret key found in client-delivered output"
             exit 1
@@ -118,8 +117,6 @@ jobs:
         with:
           version: 2.116.0
 
-      # Fresh database on every run: all migrations, then seeds. gotrue stays on because its own
-      # migrations create auth columns the seeds write to (e.g. auth.identities.provider_id).
       - name: Apply migrations and seeds to a clean local database
         run: supabase start -x realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
 
@@ -135,7 +132,6 @@ jobs:
             exit 1
           fi
 
-      # Same command as `yarn sb:db:types`; fails when a migration changed the schema without regenerating types.
       - name: Verify generated DB types are up to date
         run: |
           supabase gen types typescript --local | tail +1 > src/types/supabase-schema.ts
