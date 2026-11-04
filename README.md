@@ -17,51 +17,71 @@ Production Next.js application for crew time tracking, project management, and r
 ## Prerequisites
 
 - Node.js 20+
-- npm or Yarn 4
-- [Supabase CLI](https://supabase.com/docs/guides/cli) (for local DB and type generation)
+- Yarn 4 (via `corepack enable`)
+- [Supabase CLI](https://supabase.com/docs/guides/cli) and Docker (for local DB and type generation)
 
 ## Getting started
 
 ```bash
 # Install dependencies
-npm install
+yarn install
 
-# Copy environment template and fill in values
-cp .example.env .env
+# Start local Supabase and apply all migrations + seeds
+yarn sb:start
+yarn sb:reset
+
+# Copy the local env template, then paste "Publishable key" and "Secret key" from `yarn sb:status`
+cp .example.env .env.local
 
 # Start the dev server (Turbopack)
-npm run dev
+yarn dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000) and sign in with one of the [test accounts](#test-accounts).
 
-### Environment variables
+### Environments
 
-Create a `.env` file in the project root:
+Local/test and production settings never share a file.
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SECRET_KEY=your-service-role-key
-```
+| Environment | Template | Where values live | Supabase |
+|-------------|----------|-------------------|----------|
+| Local development | `.example.env` | `.env.local` (gitignored) | Local stack, `http://127.0.0.1:54321` |
+| Automated tests (Vitest, Playwright, CI) | `.example.env` (`PLAYWRIGHT_*` section) | `vitest.setup.ts`, `playwright.config.ts`, `.github/workflows/ci.yml` — placeholder keys only | Local only — non-local URLs are rejected (`src/lib/supabase/env-safeguards.ts`) |
+| Production | Same variable names as `.example.env` | Hosting provider env settings, never in the repo | Production project (Settings → API Keys) |
 
 | Variable | Description |
 |----------|-------------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public anon key (browser + server client) |
-| `SUPABASE_SECRET_KEY` | Service role key (server-only admin operations) |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL (public) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Publishable / anon key (browser + server client) |
+| `SUPABASE_SECRET_KEY` | Secret / service role key — **server-only**, bypasses RLS, never `NEXT_PUBLIC_` |
+
+All `.env` and `.env.*` files are gitignored; only the `.example.env` template (no secrets) is committed.
+
+### Test accounts
+
+Created by `supabase/seeds/01_users.sql` on every `yarn sb:reset`. Local only — seeds are never applied to production.
+
+| Role | Email | Password |
+|------|-------|----------|
+| Admin | `admin@softbee.dev` | `Password1` |
+| Manager | `manager@softbee.dev` | `Password1` |
+| Staff (`worker` role) | `worker@softbee.dev` | `Password1` |
 
 ## Scripts
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start development server |
-| `npm run build` | Production build |
-| `npm run start` | Serve production build |
-| `npm run lint` | Run ESLint |
-| `npm run lint:fix` | Auto-fix ESLint issues |
-| `npm run test` | Run the Vitest test suite |
-| `npm run sb:db:types` | Regenerate `src/types/supabase-schema.ts` from local Supabase |
+| `yarn dev` | Start development server |
+| `yarn build` | Production build |
+| `yarn start` | Serve production build |
+| `yarn lint` | Run ESLint |
+| `yarn lint:fix` | Auto-fix ESLint issues |
+| `yarn test` | Run the Vitest test suite |
+| `yarn test:e2e` / `yarn test:e2e:ui` | Run Playwright E2E tests (headless / UI mode) |
+| `yarn sb:start` / `yarn sb:stop` | Start / stop the local Supabase stack (Docker) |
+| `yarn sb:status` | Show local URLs and keys |
+| `yarn sb:reset` | Recreate the local DB: apply all migrations, then seeds |
+| `yarn sb:db:types` | Regenerate `src/types/supabase-schema.ts` from local Supabase |
 
 ## Project structure
 
@@ -126,21 +146,34 @@ See `.cursor/rules/state-manager.mdc` for full patterns.
 
 ```bash
 # Start local Supabase (requires Docker)
-supabase start
+yarn sb:start
 
-# Apply migrations
-supabase db push
+# Apply migrations + seeds to the local DB (drops local data)
+yarn sb:reset
 
 # Regenerate TypeScript types after schema changes
-npm run sb:db:types
+yarn sb:db:types
+```
+
+### Production migrations
+
+> **Warning:** `supabase db push` targets the **linked remote project**, not your local DB. Never use it for local development.
+
+Production migrations are applied manually by the person responsible for the release:
+
+```bash
+supabase link --project-ref <production-project-ref>
+supabase db push --dry-run   # review pending migrations
+supabase db push             # applies migrations only; seeds are not applied
 ```
 
 Migrations use 14-digit UTC timestamps: `YYYYMMDDHHmmss_description.sql`. All tables must have RLS enabled. See `.cursor/rules/supabase-db.mdc` for policy conventions.
 
 ## Code quality
 
-- **ESLint** + **Prettier** — run `npm run lint` before committing
+- **ESLint** + **Prettier** — run `yarn lint` before committing
 - **Husky** pre-commit hooks via lint-staged
+- **CI** (`.github/workflows/ci.yml`) — lint, unit tests, build, secret-leak scan and Playwright safeguards on every PR
 - Path alias: `@/*` → `src/*`
 
 ## Agent / contributor docs
