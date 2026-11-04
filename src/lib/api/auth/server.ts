@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { createServerClient } from '@/lib/supabase/server';
-import { mapUserRowToProfile } from '@/lib/api/auth/mappers';
+import { mapUserRowToProfile, USER_COLUMNS } from '@/lib/api/auth/mappers';
 import type { UserProfile } from '@/lib/api/auth/types';
 
 // server-component/route-handler counterpart of useSessionProfile.
@@ -15,7 +15,7 @@ export async function getSessionProfile(): Promise<UserProfile | null> {
     return null;
   }
 
-  const { data, error } = await supabase.from('users').select('*').eq('id', userData.user.id).single();
+  const { data, error } = await supabase.from('users').select(USER_COLUMNS).eq('id', userData.user.id).single();
 
   if (error) {
     return null;

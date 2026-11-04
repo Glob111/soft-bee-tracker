@@ -1,4 +1,4 @@
-import { mapProjectRowToProject, mapProjectToProjectRow } from '@/lib/api/projects/mappers';
+import { mapProjectRowToProject, mapProjectToProjectRow, PROJECT_COLUMNS } from '@/lib/api/projects/mappers';
 import type { CreateProjectInput, Project } from '@/lib/api/projects/types';
 import { createBrowserClient } from '@/lib/supabase/client';
 import type { ApiError } from '@/types/api-error';
@@ -24,7 +24,7 @@ export async function createProject(input: CreateProjectInput): Promise<Project>
   const { data, error, status } = await supabase
     .from('projects')
     .insert(mapProjectToProjectRow(input, userData.user.id))
-    .select('*')
+    .select(PROJECT_COLUMNS)
     .single();
 
   if (error) {

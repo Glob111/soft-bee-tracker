@@ -5,6 +5,9 @@ type UserRow = Database['public']['Tables']['users']['Row'];
 type UserUpdate = Database['public']['Tables']['users']['Update'];
 type Json = Database['public']['Tables']['users']['Row']['positions'];
 
+export const USER_COLUMNS =
+  'id, created_at, updated_at, username, email, first_name, last_name, phone, avatar_url, role, date_employment, positions, salary, salary_info, type_salary, linkedin, upwork, is_confirmed, is_blocked';
+
 export function mapUserRowToProfile(row: UserRow): UserProfile {
   return {
     id: row.id,
