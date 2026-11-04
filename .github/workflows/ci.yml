@@ -105,41 +105,5 @@ jobs:
           retention-days: 7
 
   db:
-    name: Migrations, Seeds & DB Types
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: 2.116.0
-
-      - name: Apply migrations and seeds to a clean local database
-        run: supabase start -x realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
-
-      - name: Verify seeded test accounts and roles
-        run: |
-          actual=$(docker exec supabase_db_soft_bee_tracker psql -U postgres -tAc \
-            "select string_agg(email || ':' || role || ':' || is_confirmed, ',' order by email) from public.users where email like '%@softbee.dev'")
-          expected="admin@softbee.dev:admin:true,manager@softbee.dev:manager:true,worker@softbee.dev:worker:true"
-          if [ "$actual" != "$expected" ]; then
-            echo "Error: unexpected seeded users"
-            echo "  expected: $expected"
-            echo "  actual:   $actual"
-            exit 1
-          fi
-
-      - name: Verify generated DB types are up to date
-        run: |
-          supabase gen types typescript --local | tail +1 > src/types/supabase-schema.ts
-          git diff --exit-code -- src/types/supabase-schema.ts || {
-            echo "Error: src/types/supabase-schema.ts is out of date — run 'yarn sb:db:types' and commit the result"
-            exit 1
-          }
-
-      - name: Stop Supabase
-        if: always()
-        run: supabase stop --no-backup
+    name: Validate database
+    uses: ./.github/workflows/validate-db.yml

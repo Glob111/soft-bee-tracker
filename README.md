@@ -159,7 +159,14 @@ yarn sb:db:types
 
 > **Warning:** `supabase db push` targets the **linked remote project**, not your local DB. Never use it for local development.
 
-Production migrations are applied manually by the person responsible for the release:
+Production migrations are deployed by `.github/workflows/deploy-db.yml` on every push to `main` that changes `supabase/migrations/**` (or manually via **Run workflow**):
+
+1. `validate-db.yml` runs first: all migrations + seeds on a clean database, schema lint, test accounts, DB types.
+2. The `deploy` job waits for approval in the `production` GitHub Environment, prints the pending migrations (`db push --dry-run`) and applies them. Seeds are never applied to production.
+
+Repository setup (owner, one time): create the `production` environment under **Settings → Environments**, add required reviewers, and add the `SUPABASE_DB_URL` secret (production connection string) to it.
+
+Manual fallback, by the person responsible for the release:
 
 ```bash
 supabase link --project-ref <production-project-ref>
@@ -173,7 +180,8 @@ Migrations use 14-digit UTC timestamps: `YYYYMMDDHHmmss_description.sql`. All ta
 
 - **ESLint** + **Prettier** — run `yarn lint` before committing
 - **Husky** pre-commit hooks via lint-staged
-- **CI** (`.github/workflows/ci.yml`) — lint, unit tests, build, secret-leak scan and Playwright safeguards on every PR; a parallel `db` job applies all migrations + seeds to a clean database, checks the test accounts and fails if `src/types/supabase-schema.ts` is out of date
+- **CI** (`.github/workflows/ci.yml`) — lint, unit tests, build, secret-leak scan and Playwright safeguards on every PR, plus `validate-db.yml` in parallel: all migrations + seeds on a clean database, `supabase db lint`, test accounts, and a check that `src/types/supabase-schema.ts` is up to date
+- **DB deploy** (`.github/workflows/deploy-db.yml`) — validated, approval-gated `supabase db push` to production on merges to `main`
 - Path alias: `@/*` → `src/*`
 
 ## Agent / contributor docs
