@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-import { mapCreateTrackerInputToRow, mapTrackerRowToTracker } from '@/lib/api/trackers/mappers';
+import { mapCreateTrackerInputToRow, mapTrackerRowToTracker, TRACKER_COLUMNS } from '@/lib/api/trackers/mappers';
 import { trackerKeys } from '@/lib/api/trackers/queries';
 import type { CreateTrackerInput, Tracker } from '@/lib/api/trackers/types';
 import { createBrowserClient } from '@/lib/supabase/client';
@@ -18,7 +18,7 @@ export async function createTracker(input: CreateTrackerInput): Promise<Tracker>
   const { data, error, status } = await supabase
     .from('trackers')
     .insert(mapCreateTrackerInputToRow(input))
-    .select('*')
+    .select(TRACKER_COLUMNS)
     .single();
 
   if (error) {
