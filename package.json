@@ -11,6 +11,11 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "prepare": "husky",
+    "sb:start": "supabase start",
+    "sb:stop": "supabase stop",
+    "sb:status": "supabase status",
+    "sb:reset": "supabase db reset --local",
+    "sb:test": "supabase db test --db-url postgresql://supabase_admin:postgres@127.0.0.1:54322/postgres",
     "sb:db:types": "supabase gen types typescript --local | tail +1 > src/types/supabase-schema.ts"
   },
   "lint-staged": {
