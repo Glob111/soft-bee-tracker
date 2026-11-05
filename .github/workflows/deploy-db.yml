@@ -1,12 +1,6 @@
 name: Deploy database migrations
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'supabase/migrations/**'
-      - '.github/workflows/deploy-db.yml'
-      - '.github/workflows/validate-db.yml'
   workflow_dispatch:
 
 permissions:
@@ -19,10 +13,12 @@ concurrency:
 jobs:
   validate:
     name: Validate database
+    if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/validate-db.yml
 
   deploy:
     name: Deploy to production
+    if: github.ref == 'refs/heads/main'
     needs: [validate]
     runs-on: ubuntu-latest
     environment: production

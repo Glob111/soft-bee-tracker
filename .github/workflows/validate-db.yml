@@ -27,17 +27,8 @@ jobs:
       - name: Lint database schema
         run: supabase db lint --local --fail-on error
 
-      - name: Verify seeded test accounts and roles
-        run: |
-          actual=$(docker exec supabase_db_soft_bee_tracker psql -U postgres -tAc \
-            "select string_agg(email || ':' || role || ':' || is_confirmed, ',' order by email) from public.users where email like '%@softbee.dev'")
-          expected="admin@softbee.dev:admin:true,manager@softbee.dev:manager:true,worker@softbee.dev:worker:true"
-          if [ "$actual" != "$expected" ]; then
-            echo "Error: unexpected seeded users"
-            echo "  expected: $expected"
-            echo "  actual:   $actual"
-            exit 1
-          fi
+      - name: Run database tests (pgTAP)
+        run: supabase db test --db-url postgresql://supabase_admin:postgres@127.0.0.1:54322/postgres
 
       - name: Verify generated DB types are up to date
         run: |

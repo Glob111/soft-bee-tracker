@@ -81,6 +81,7 @@ Created by `supabase/seeds/01_users.sql` on every `yarn sb:reset`. Local only �
 | `yarn sb:start` / `yarn sb:stop` | Start / stop the local Supabase stack (Docker) |
 | `yarn sb:status` | Show local URLs and keys |
 | `yarn sb:reset` | Recreate the local DB: apply all migrations, then seeds |
+| `yarn sb:test` | Run pgTAP database tests from `supabase/tests/` against the local DB |
 | `yarn sb:db:types` | Regenerate `src/types/supabase-schema.ts` from local Supabase |
 
 ## Project structure
@@ -101,7 +102,8 @@ src/
 
 supabase/
 ├── config.toml           # Local Supabase configuration
-└── migrations/           # SQL migrations (YYYYMMDDHHmmss_description.sql)
+├── migrations/           # SQL migrations (YYYYMMDDHHmmss_description.sql)
+└── tests/database/       # pgTAP tests (`yarn sb:test`)
 
 epics/                    # Feature epics and task specifications
 .cursor/rules/            # AI agent coding standards
@@ -159,9 +161,9 @@ yarn sb:db:types
 
 > **Warning:** `supabase db push` targets the **linked remote project**, not your local DB. Never use it for local development.
 
-Production migrations are deployed by `.github/workflows/deploy-db.yml` on every push to `main` that changes `supabase/migrations/**` (or manually via **Run workflow**):
+Production migrations are deployed **manually only**: after the migrations are merged to `main`, the person responsible for the release opens **Actions → Deploy database migrations → Run workflow** with the `main` branch selected (other branches are skipped). Nothing deploys automatically on merge.
 
-1. `validate-db.yml` runs first: all migrations + seeds on a clean database, schema lint, test accounts, DB types.
+1. `validate-db.yml` runs first: all migrations + seeds on a clean database, schema lint, pgTAP tests (`supabase/tests`), DB types.
 2. The `deploy` job waits for approval in the `production` GitHub Environment, prints the pending migrations (`db push --dry-run`) and applies them. Seeds are never applied to production.
 
 Repository setup (owner, one time): create the `production` environment under **Settings → Environments**, add required reviewers, and add the `SUPABASE_DB_URL` secret (production connection string) to it.
@@ -180,8 +182,8 @@ Migrations use 14-digit UTC timestamps: `YYYYMMDDHHmmss_description.sql`. All ta
 
 - **ESLint** + **Prettier** — run `yarn lint` before committing
 - **Husky** pre-commit hooks via lint-staged
-- **CI** (`.github/workflows/ci.yml`) — lint, unit tests, build, secret-leak scan and Playwright safeguards on every PR, plus `validate-db.yml` in parallel: all migrations + seeds on a clean database, `supabase db lint`, test accounts, and a check that `src/types/supabase-schema.ts` is up to date
-- **DB deploy** (`.github/workflows/deploy-db.yml`) — validated, approval-gated `supabase db push` to production on merges to `main`
+- **CI** (`.github/workflows/ci.yml`) — lint, unit tests, build, secret-leak scan and Playwright safeguards on every PR, plus `validate-db.yml` in parallel: all migrations + seeds on a clean database, `supabase db lint`, pgTAP tests (`yarn sb:test`: seeded test accounts, RLS on every public table), and a check that `src/types/supabase-schema.ts` is up to date
+- **DB deploy** (`.github/workflows/deploy-db.yml`) — manually triggered, validated, approval-gated `supabase db push` to production from `main`
 - Path alias: `@/*` → `src/*`
 
 ## Agent / contributor docs
