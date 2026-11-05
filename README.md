@@ -144,6 +144,12 @@ The sidebar (`src/components/layout/app-sidebar/app-sidebar.tsx`) uses the same 
 
 The access rules live in `src/constants/index.ts`: `PUBLIC_ROUTES_LIST`, `GUEST_ONLY_ROUTES_LIST` and `ROLE_RESTRICTED_ROUTES`. To restrict a new page, add it to `ROLE_RESTRICTED_ROUTES` and to the matrix in `src/lib/route-access.test.ts`, then call `requireRouteAccess` in its `page.tsx`. A missing or unknown role is denied. Hiding a page is not data security: RLS still decides what each request can read or write.
 
+#### Verify route protection
+
+1. `yarn test` runs the route matrix (`src/lib/route-access.test.ts`) and the page check (`src/lib/api/auth/server.test.ts`).
+2. With `yarn dev` and the seeded [test accounts](#test-accounts): signed out, every app route redirects to `/login`. As `worker@softbee.dev`, `/crew`, `/reports` and `/users` show the access-denied page with status 403, and the sidebar shows only Tracker and Projects. As `admin@softbee.dev`, every route opens.
+3. Direct API requests ignore the UI. Sign in through `POST /auth/v1/token?grant_type=password`, then call `/rest/v1/users` with the access token. Each user, any role, sees only their own row, and the anon key sees none.
+
 ### State management
 
 | Concern | Where |
