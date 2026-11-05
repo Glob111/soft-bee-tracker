@@ -153,13 +153,19 @@ yarn sb:start
 # Apply migrations + seeds to the local DB (drops local data)
 yarn sb:reset
 
+# Apply migrations to the local database
+supabase db push
+
+# Apply migrations to the linked hosted project (asks for confirmation)
+supabase db push --remote
+
 # Regenerate TypeScript types after schema changes
 yarn sb:db:types
 ```
 
 ### Production migrations
 
-> **Warning:** `supabase db push` targets the **linked remote project**, not your local DB. Never use it for local development.
+> **Warning:** `supabase db push` targets the **local** database. The linked hosted project needs `supabase db push --remote`, and the CLI asks for confirmation.
 
 Production migrations are deployed **manually only**: after the migrations are merged to `main`, the person responsible for the release opens **Actions → Deploy database migrations → Run workflow** with the `main` branch selected (other branches are skipped). Nothing deploys automatically on merge.
 
@@ -172,8 +178,8 @@ Manual fallback, by the person responsible for the release:
 
 ```bash
 supabase link --project-ref <production-project-ref>
-supabase db push --dry-run   # review pending migrations
-supabase db push             # applies migrations only; seeds are not applied
+supabase db push --remote --dry-run   # review pending migrations
+supabase db push --remote             # applies migrations only; asks for confirmation. Seeds are not applied
 ```
 
 Migrations use 14-digit UTC timestamps: `YYYYMMDDHHmmss_description.sql`. All tables must have RLS enabled. See `.cursor/rules/supabase-db.mdc` for policy conventions.

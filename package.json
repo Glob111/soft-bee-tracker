@@ -16,7 +16,7 @@
     "sb:status": "supabase status",
     "sb:reset": "supabase db reset --local",
     "sb:test": "supabase db test --db-url postgresql://supabase_admin:postgres@127.0.0.1:54322/postgres",
-    "sb:db:types": "supabase gen types typescript --local | tail +1 > src/types/supabase-schema.ts"
+    "sb:db:types": "supabase gen types typescript > src/types/supabase-schema.ts"
   },
   "lint-staged": {
     "*.{ts,tsx,mjs}": [
