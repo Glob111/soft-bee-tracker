@@ -8,13 +8,15 @@ export const ROUTES = {
   TRACKER: '/tracker',
   CREW: '/crew',
   REPORTS: '/reports',
-  PROFILE: '/profile'
+  PROFILE: '/profile',
+  BLOCKED: '/blocked',
+  TERMS: '/terms'
 } as const;
 
 export const PROTECTED_ROUTES_LIST = ['/dashboard'];
 
 export const ALLOW_NO_AUTHORIZED_ROUTES_LIST = ['/login', '/register', '/forgot-password'];
 
-export const ALLOW_AUTHORIZED_ROUTES_LIST = ['/login', '/register'];
+export const ALLOW_AUTHORIZED_ROUTES_LIST = ['/login'];
 
 export const ADMIN_ROLE = 'admin';

@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { useController, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 
+import { DatePicker } from '@components/common/form/date-picker';
 import { Button } from '@ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@ui/dialog';
 import { Field, FieldError, FieldGroup, FieldLabel } from '@ui/field';
@@ -20,11 +21,13 @@ import {
   createProjectFormSchema,
   type CreateProjectFormValues
 } from '@/lib/schemas/create-project-form.schema';
+import { formatText } from '@/lib/format-text';
+import content from '../content.json';
 
 const PROJECT_TYPE_OPTIONS: Array<{ label: string; value: ProjectType }> = [
-  { label: 'Time and material', value: 'time_material' },
-  { label: 'Fixed price', value: 'fixed_price' },
-  { label: 'Non-profit', value: 'non_profit' }
+  { label: content.createDialog.typeOptions.time_material, value: 'time_material' },
+  { label: content.createDialog.typeOptions.fixed_price, value: 'fixed_price' },
+  { label: content.createDialog.typeOptions.non_profit, value: 'non_profit' }
 ];
 
 export function CreateProjectDialog() {
@@ -44,12 +47,14 @@ export function CreateProjectDialog() {
     resolver: zodResolver(createProjectFormSchema)
   });
   const { field: typeField } = useController({ control, name: 'type' });
+  const { field: startDateField } = useController({ control, name: 'startDate' });
+  const { field: endDateField } = useController({ control, name: 'endDate' });
   const isBusy = isSubmitting || isCreating;
 
   async function handleProjectSubmit(values: CreateProjectFormValues) {
     try {
       const project = await createProject(buildCreateProjectInput(values));
-      toast.success(`${project.name} was created`);
+      toast.success(formatText(content.createDialog.created, { name: project.name }));
       reset(CREATE_PROJECT_FORM_DEFAULTS);
       resetCreation();
       setOpen(false);
@@ -93,24 +98,24 @@ export function CreateProjectDialog() {
 
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange} disablePointerDismissal={isBusy}>
-      <DialogTrigger render={<Button />}>
+      <DialogTrigger render={<Button size='lg' />}>
         <PlusIcon data-icon='inline-start' />
-        New project
+        {content.createDialog.triggerButton}
       </DialogTrigger>
 
       <DialogContent className='max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-lg' showCloseButton={!isBusy}>
         <DialogHeader>
-          <DialogTitle>Create project</DialogTitle>
-          <DialogDescription>Add a project that you will manage.</DialogDescription>
+          <DialogTitle>{content.createDialog.title}</DialogTitle>
+          <DialogDescription>{content.createDialog.description}</DialogDescription>
         </DialogHeader>
 
-        <form className='grid gap-4' onSubmit={handleFormSubmit} noValidate>
+        <form className='grid gap-6' onSubmit={handleFormSubmit} noValidate>
           <FieldGroup className='grid gap-4 sm:grid-cols-2'>
             <Field className='sm:col-span-2' data-invalid={Boolean(errors.name)}>
-              <FieldLabel htmlFor='name'>Project name</FieldLabel>
+              <FieldLabel htmlFor='name'>{content.createDialog.nameLabel}</FieldLabel>
               <Input
                 id='name'
-                placeholder='Website redesign'
+                placeholder={content.createDialog.namePlaceholder}
                 autoComplete='off'
                 disabled={isBusy}
                 aria-invalid={Boolean(errors.name)}
@@ -120,10 +125,10 @@ export function CreateProjectDialog() {
             </Field>
 
             <Field className='sm:col-span-2' data-invalid={Boolean(errors.client)}>
-              <FieldLabel htmlFor='client'>Client</FieldLabel>
+              <FieldLabel htmlFor='client'>{content.createDialog.clientLabel}</FieldLabel>
               <Input
                 id='client'
-                placeholder='Acme'
+                placeholder={content.createDialog.clientPlaceholder}
                 autoComplete='organization'
                 disabled={isBusy}
                 aria-invalid={Boolean(errors.client)}
@@ -133,10 +138,15 @@ export function CreateProjectDialog() {
             </Field>
 
             <Field className='sm:col-span-2' data-invalid={Boolean(errors.type)}>
-              <FieldLabel htmlFor='type'>Project type</FieldLabel>
-              <Select<ProjectType> value={typeField.value} onValueChange={handleProjectTypeChange} disabled={isBusy}>
+              <FieldLabel htmlFor='type'>{content.createDialog.typeLabel}</FieldLabel>
+              <Select<ProjectType>
+                value={typeField.value}
+                onValueChange={handleProjectTypeChange}
+                items={PROJECT_TYPE_OPTIONS}
+                disabled={isBusy}
+              >
                 <SelectTrigger id='type' className='w-full' aria-invalid={Boolean(errors.type)}>
-                  <SelectValue placeholder='Select a project type' />
+                  <SelectValue placeholder={content.createDialog.typePlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
                   {PROJECT_TYPE_OPTIONS.map((option) => (
@@ -150,10 +160,10 @@ export function CreateProjectDialog() {
             </Field>
 
             <Field className='sm:col-span-2' data-invalid={Boolean(errors.note)}>
-              <FieldLabel htmlFor='note'>Note (optional)</FieldLabel>
+              <FieldLabel htmlFor='note'>{content.createDialog.noteLabel}</FieldLabel>
               <Textarea
                 id='note'
-                placeholder='Project context or delivery notes'
+                placeholder={content.createDialog.notePlaceholder}
                 disabled={isBusy}
                 aria-invalid={Boolean(errors.note)}
                 {...register('note')}
@@ -162,11 +172,11 @@ export function CreateProjectDialog() {
             </Field>
 
             <Field className='sm:col-span-2' data-invalid={Boolean(errors.pictureUrl)}>
-              <FieldLabel htmlFor='pictureUrl'>Picture URL (optional)</FieldLabel>
+              <FieldLabel htmlFor='pictureUrl'>{content.createDialog.pictureUrlLabel}</FieldLabel>
               <Input
                 id='pictureUrl'
                 type='url'
-                placeholder='https://example.com/project.png'
+                placeholder={content.createDialog.pictureUrlPlaceholder}
                 disabled={isBusy}
                 aria-invalid={Boolean(errors.pictureUrl)}
                 {...register('pictureUrl')}
@@ -175,14 +185,26 @@ export function CreateProjectDialog() {
             </Field>
 
             <Field data-invalid={Boolean(errors.startDate)}>
-              <FieldLabel htmlFor='startDate'>Start date (optional)</FieldLabel>
-              <Input id='startDate' type='date' disabled={isBusy} aria-invalid={Boolean(errors.startDate)} {...register('startDate')} />
+              <FieldLabel htmlFor='startDate'>{content.createDialog.startDateLabel}</FieldLabel>
+              <DatePicker
+                id='startDate'
+                value={startDateField.value}
+                onChange={startDateField.onChange}
+                isDisabled={isBusy}
+                isInvalid={Boolean(errors.startDate)}
+              />
               <FieldError errors={[errors.startDate]} />
             </Field>
 
             <Field data-invalid={Boolean(errors.endDate)}>
-              <FieldLabel htmlFor='endDate'>End date (optional)</FieldLabel>
-              <Input id='endDate' type='date' disabled={isBusy} aria-invalid={Boolean(errors.endDate)} {...register('endDate')} />
+              <FieldLabel htmlFor='endDate'>{content.createDialog.endDateLabel}</FieldLabel>
+              <DatePicker
+                id='endDate'
+                value={endDateField.value}
+                onChange={endDateField.onChange}
+                isDisabled={isBusy}
+                isInvalid={Boolean(errors.endDate)}
+              />
               <FieldError errors={[errors.endDate]} />
             </Field>
           </FieldGroup>
@@ -194,10 +216,10 @@ export function CreateProjectDialog() {
               </p>
             ) : null}
             <Button type='button' variant='outline' disabled={isBusy} onClick={handleCancelClick}>
-              Cancel
+              {content.createDialog.cancelButton}
             </Button>
             <Button type='submit' disabled={isBusy}>
-              {isBusy ? 'Creating…' : 'Create project'}
+              {isBusy ? content.createDialog.submittingButton : content.createDialog.submitButton}
             </Button>
           </DialogFooter>
         </form>

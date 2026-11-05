@@ -1,19 +1,18 @@
 import type { ProfileFormValues } from '@/lib/schemas/profile-form.schema';
+import content from './content.json';
 
 export const PROFILE_FORM_FIELDS: ProfileFormField[] = [
-  { name: 'firstName', label: 'First name', placeholder: 'John', autoComplete: 'given-name' },
-  { name: 'lastName', label: 'Last name', placeholder: 'Doe', autoComplete: 'family-name' },
-  { name: 'username', label: 'Username', placeholder: 'johndoe', autoComplete: 'username' },
-  { name: 'phone', label: 'Phone', placeholder: '+1 555 123 4567', type: 'tel', autoComplete: 'tel' },
+  { name: 'firstName', ...content.fields.firstName, autoComplete: 'given-name' },
+  { name: 'lastName', ...content.fields.lastName, autoComplete: 'family-name' },
+  { name: 'username', ...content.fields.username, autoComplete: 'username' },
+  { name: 'phone', ...content.fields.phone, type: 'tel', autoComplete: 'tel' },
   {
     name: 'avatarUrl',
-    label: 'Avatar URL',
-    placeholder: 'https://example.com/avatar.png',
-    type: 'url',
-    description: 'Shown in the sidebar. Leave empty to fall back to your initials.'
+    ...content.fields.avatarUrl,
+    type: 'url'
   },
-  { name: 'linkedin', label: 'LinkedIn', placeholder: 'https://linkedin.com/in/johndoe', type: 'url' },
-  { name: 'upwork', label: 'Upwork', placeholder: 'https://upwork.com/freelancers/johndoe', type: 'url' }
+  { name: 'linkedin', ...content.fields.linkedin, type: 'url' },
+  { name: 'upwork', ...content.fields.upwork, type: 'url' }
 ];
 
 export interface ProfileFormField {

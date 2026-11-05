@@ -26,3 +26,8 @@ export interface CreateProjectInput {
   endDate: string | null;
   type: ProjectType;
 }
+
+export interface UpdateProjectStatusInput {
+  projectId: string;
+  status: ProjectStatus;
+}

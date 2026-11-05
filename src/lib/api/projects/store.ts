@@ -22,6 +22,7 @@ export interface ProjectsStore {
   getProjects: () => Promise<void>;
   getUserProjects: () => Promise<void>;
   addUserProject: (project: Project) => void;
+  replaceUserProject: (project: Project) => void;
   reset: () => void;
 }
 
@@ -112,6 +113,13 @@ export function createProjectsStore(repository: ProjectsRepository) {
         userProjectsRevision += 1;
         set((state) => ({
           userProjects: state.userProjects.some(({ id }) => id === project.id) ? state.userProjects : [...state.userProjects, project]
+        }));
+      },
+      replaceUserProject: (project) => {
+        userProjectsRevision += 1;
+        set((state) => ({
+          userProjects: state.userProjects.map((current) => (current.id === project.id ? project : current)),
+          projects: state.projects.map((current) => (current.id === project.id ? project : current))
         }));
       }
     };

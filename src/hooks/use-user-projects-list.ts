@@ -8,13 +8,18 @@ export function useUserProjectsList() {
   const error = useProjectsStore((state) => state.error);
   const getUserProjects = useProjectsStore((state) => state.getUserProjects);
 
-  React.useEffect(() => {
+  const reload = React.useCallback(() => {
     void getUserProjects().catch(() => undefined);
   }, [getUserProjects]);
+
+  React.useEffect(() => {
+    reload();
+  }, [reload]);
 
   return {
     userProjects,
     isLoading,
-    error
+    error,
+    reload
   };
 }

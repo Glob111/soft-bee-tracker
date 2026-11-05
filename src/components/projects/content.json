@@ -1,0 +1,66 @@
+{
+  "types": {
+    "time_material": "Time & material",
+    "fixed_price": "Fixed price",
+    "non_profit": "Non-profit"
+  },
+  "list": {
+    "tabs": {
+      "active": "Active",
+      "archived": "Archived"
+    },
+    "empty": {
+      "active": {
+        "title": "No active projects",
+        "description": "Projects you are a member of will show up here."
+      },
+      "archived": {
+        "title": "Nothing archived",
+        "description": "Archived projects stay here for reference."
+      }
+    },
+    "openEnded": "now",
+    "actionsLabel": "{name} actions",
+    "archiveAction": "Archive project",
+    "restoreAction": "Restore project",
+    "archived": "{name} archived",
+    "restored": "{name} restored",
+    "updateFailed": "Could not update the project",
+    "archiveDialog": {
+      "title": "Archive {name}?",
+      "description": "It moves to Archived and stops showing up in active work. Logged time stays in reports, and you can restore it any time.",
+      "confirmButton": "Archive project"
+    },
+    "restoreDialog": {
+      "title": "Restore {name}?",
+      "description": "It moves back to Active and shows up in active work again. You can archive it again any time.",
+      "confirmButton": "Restore project"
+    }
+  },
+  "createDialog": {
+    "triggerButton": "New project",
+    "title": "Create project",
+    "description": "Add a project that you will manage.",
+    "created": "{name} was created",
+    "nameLabel": "Project name",
+    "namePlaceholder": "Website redesign",
+    "clientLabel": "Client",
+    "clientPlaceholder": "Acme",
+    "typeLabel": "Project type",
+    "typePlaceholder": "Select a project type",
+    "typeOptions": {
+      "time_material": "Time and material",
+      "fixed_price": "Fixed price",
+      "non_profit": "Non-profit"
+    },
+    "noteLabel": "Note (optional)",
+    "notePlaceholder": "Project context or delivery notes",
+    "pictureUrlLabel": "Picture URL (optional)",
+    "pictureUrlPlaceholder": "https://example.com/project.png",
+    "startDateLabel": "Start date (optional)",
+    "endDateLabel": "End date (optional)",
+    "cancelButton": "Cancel",
+    "submitButton": "Create project",
+    "submittingButton": "Creating…"
+  }
+}
