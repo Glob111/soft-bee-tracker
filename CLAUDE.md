@@ -87,8 +87,8 @@ src/lib/api/users/
   mutations.ts   # pure write helpers; optional useMutation hooks
   get-users.store.ts    # optional Zustand read state/action
   create-user.store.ts  # optional Zustand create state/action
-  types.ts       # optional — request/response interfaces
-  mappers.ts     # optional — DB row ↔ domain mapping
+  types.ts       # optional — aliases and Pick/Omit of generated database types
+  mappers.ts     # only when a value changes at runtime
 ```
 
 - **`index.ts`**: components import from `@/lib/api/users` only — no deep paths.
@@ -123,7 +123,7 @@ src/lib/api/users/
 
 - Keep Supabase query helpers under `lib/api/**` and related Supabase helpers under `lib/supabase/**`.
 - Export and reuse query/mutation helpers instead of re-implementing table access in feature components.
-- Follow the `lib/api/<feature>/` split: `index.ts` (barrel), `queries.ts` (reads), `mutations.ts` (writes), optional operation-specific Zustand stores, `types.ts`, and `mappers.ts`.
+- Follow the `lib/api/<feature>/` split: `index.ts` (barrel), `queries.ts` (reads), `mutations.ts` (writes), optional operation-specific Zustand stores, and `types.ts`. Domain types alias generated `Database` types. Add `mappers.ts` only when a value changes at runtime; see `.cursor/rules/lib-services.mdc`.
 - Do not represent the same remote collection in both a Zustand store and a TanStack Query cache.
 
 ## AG Grid rules
