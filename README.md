@@ -140,6 +140,8 @@ Components import hooks from `@/lib/api/<feature>`. They must not call Supabase,
 
 Role-restricted pages also call `requireRouteAccess(ROUTES.X)` from `@/lib/api/auth/server` at the top of `page.tsx`. It re-checks the role from `public.users`, so the page stays protected even if the proxy rules drift: no session redirects to `/login`, and a wrong role redirects to `/access-denied`.
 
+The sidebar (`src/components/layout/app-sidebar/app-sidebar.tsx`) uses the same rules to hide links a role can't open.
+
 The access rules live in `src/constants/index.ts`: `PUBLIC_ROUTES_LIST`, `GUEST_ONLY_ROUTES_LIST` and `ROLE_RESTRICTED_ROUTES`. To restrict a new page, add it to `ROLE_RESTRICTED_ROUTES` and to the matrix in `src/lib/route-access.test.ts`, then call `requireRouteAccess` in its `page.tsx`. A missing or unknown role is denied. Hiding a page is not data security: RLS still decides what each request can read or write.
 
 ### State management
