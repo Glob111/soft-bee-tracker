@@ -146,8 +146,8 @@ The access rules live in `src/constants/index.ts`: `PUBLIC_ROUTES_LIST`, `GUEST_
 
 #### Verify route protection
 
-1. `yarn test` runs the route matrix (`src/lib/route-access.test.ts`) and the page check (`src/lib/api/auth/server.test.ts`).
-2. With `yarn dev` and the seeded [test accounts](#test-accounts): signed out, every app route redirects to `/login`. As `worker@softbee.dev`, `/crew`, `/reports` and `/users` show the access-denied page with status 403, and the sidebar shows only Tracker and Projects. As `admin@softbee.dev`, every route opens.
+1. `yarn test` runs the route matrix (`src/lib/route-access.test.ts`), the proxy responses and cookie handling (`src/lib/supabase/session.test.ts`), and the page check (`src/lib/api/auth/server.test.ts`).
+2. With `yarn dev` and the seeded [test accounts](#test-accounts): signed out, every app route redirects to `/login`. As `worker@softbee.dev`, `/crew`, `/reports` and `/users` show the access-denied page with status 403, and the sidebar shows only Tracker and Projects. As `manager@softbee.dev`, `/crew` and `/reports` open and only `/users` is denied. As `admin@softbee.dev`, every route opens.
 3. Direct API requests ignore the UI. Sign in through `POST /auth/v1/token?grant_type=password`, then call `/rest/v1/users` with the access token. Each user, any role, sees only their own row, and the anon key sees none.
 
 ### State management
