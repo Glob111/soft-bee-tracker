@@ -63,8 +63,8 @@ src/lib/api/users/
   index.ts       # barrel — re-export public API only
   queries.ts     # query key factory, pure fetch helpers, useQuery hooks
   mutations.ts   # pure write helpers, useMutation hooks
-  types.ts       # optional — request/response interfaces when non-trivial
-  mappers.ts     # optional — DB row ↔ domain mapping
+  types.ts       # optional — aliases and Pick/Omit of generated database types
+  mappers.ts     # only when a value changes at runtime
 ```
 
 - **`index.ts`**: single import surface for the feature (`@/lib/api/users`). Do not import deep paths from components.
@@ -73,6 +73,7 @@ src/lib/api/users/
 - Pure fetch/mutation helpers must not import React; hooks are thin wrappers that call those helpers.
 - Throw `{ message, statusCode? } satisfies ApiError` from helpers; use `src/types/api-error.ts`.
 - Components, pages, and layouts import hooks only from `@/lib/api/<feature>` — never call Supabase or `fetch` directly.
+- Domain types alias generated `Database` types. Add `mappers.ts` only when a value changes at runtime. See **lib-services.mdc**.
 
 ## Supabase client and auth SSR (strict)
 
