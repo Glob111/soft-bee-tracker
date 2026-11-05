@@ -121,11 +121,11 @@ src/lib/api/users/
   queries.ts     # Read helpers
   mutations.ts   # Write helpers
   store.ts       # Optional typed Zustand state and async actions
-  types.ts       # Optional request/response interfaces
-  mappers.ts     # Optional DB row ↔ domain mapping
+  types.ts       # Optional aliases and Pick/Omit of generated database types
+  mappers.ts     # Only when a value changes at runtime
 ```
 
-Components import hooks from `@/lib/api/<feature>`. They must not call Supabase, `fetch`, or Axios directly.
+Components import hooks from `@/lib/api/<feature>`. They must not call Supabase, `fetch`, or Axios directly. Domain types alias generated database types. A mapper exists only when a value changes at runtime. See `.cursor/rules/lib-services.mdc`.
 
 ### State management
 

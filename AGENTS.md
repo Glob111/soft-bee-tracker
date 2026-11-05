@@ -23,6 +23,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Keep independent async operations in independent stores (for example, project loading and project creation); do not share one `isLoading` or `error` lifecycle between unrelated operations.
 - Keep entities separate: `projects` and `project-rates` must not share a store or domain types.
 - Do not duplicate the same server data in both TanStack Query and Zustand. Follow the state owner already selected for that domain.
+- Domain types alias generated `Database` types. Add `mappers.ts` only when a value changes at runtime. See `.cursor/rules/lib-services.mdc`.
 
 ## Database / RLS
 
