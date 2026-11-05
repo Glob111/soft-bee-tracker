@@ -23,6 +23,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Keep independent async operations in independent stores (for example, project loading and project creation); do not share one `isLoading` or `error` lifecycle between unrelated operations.
 - Keep entities separate: `projects` and `project-rates` must not share a store or domain types.
 - Do not duplicate the same server data in both TanStack Query and Zustand. Follow the state owner already selected for that domain.
+- Route access is decided by `getRouteAccess` (`src/lib/route-access.ts`) from the verified `user_role` JWT claim; rules live in `src/constants/index.ts`. Restrict a new page by adding it to `ROLE_RESTRICTED_ROUTES` and the matrix test; unlisted routes require a session, and a missing role fails closed. Never read the role from `user_metadata`.
 
 ## Database / RLS
 
