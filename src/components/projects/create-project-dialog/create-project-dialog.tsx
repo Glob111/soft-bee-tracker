@@ -13,8 +13,8 @@ import { Field, FieldError, FieldGroup, FieldLabel } from '@ui/field';
 import { Input } from '@ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@ui/select';
 import { Textarea } from '@ui/textarea';
-import { useCreateProjectStore } from '@/lib/api/projects';
-import type { ProjectType } from '@/lib/api/projects';
+import { useCreateProject } from '@/lib/api/projects';
+import type { Project, ProjectType } from '@/lib/api/projects';
 import {
   buildCreateProjectInput,
   CREATE_PROJECT_FORM_DEFAULTS,
@@ -32,10 +32,7 @@ const PROJECT_TYPE_OPTIONS: Array<{ label: string; value: ProjectType }> = [
 
 export function CreateProjectDialog() {
   const [open, setOpen] = useState(false);
-  const createProject = useCreateProjectStore((state) => state.createProject);
-  const isCreating = useCreateProjectStore((state) => state.isCreating);
-  const createError = useCreateProjectStore((state) => state.createError);
-  const resetCreation = useCreateProjectStore((state) => state.reset);
+  const { mutate: createProject, isPending: isCreating, error: createError, reset: resetCreation } = useCreateProject();
   const {
     control,
     formState: { errors, isSubmitting },
@@ -51,16 +48,15 @@ export function CreateProjectDialog() {
   const { field: endDateField } = useController({ control, name: 'endDate' });
   const isBusy = isSubmitting || isCreating;
 
-  async function handleProjectSubmit(values: CreateProjectFormValues) {
-    try {
-      const project = await createProject(buildCreateProjectInput(values));
-      toast.success(formatText(content.createDialog.created, { name: project.name }));
-      reset(CREATE_PROJECT_FORM_DEFAULTS);
-      resetCreation();
-      setOpen(false);
-    } catch {
-      // The creation store owns and exposes the normalized API error.
-    }
+  function handleProjectCreated(project: Project) {
+    toast.success(formatText(content.createDialog.created, { name: project.name }));
+    reset(CREATE_PROJECT_FORM_DEFAULTS);
+    resetCreation();
+    setOpen(false);
+  }
+
+  function handleProjectSubmit(values: CreateProjectFormValues) {
+    createProject(buildCreateProjectInput(values), { onSuccess: handleProjectCreated });
   }
 
   function handleFormSubmit(event: React.FormEvent<HTMLFormElement>) {

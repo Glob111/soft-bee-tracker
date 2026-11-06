@@ -8,7 +8,7 @@ import { useForm } from 'react-hook-form';
 import { TrackerFormFields } from '@components/tracker/tracker-form-fields/tracker-form-fields';
 import { Button } from '@ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@ui/dialog';
-import { useProjectsOptions } from '@/hooks/use-projects-options';
+import { useProjects } from '@/lib/api/projects';
 import { useCreateTracker } from '@/lib/api/trackers';
 import {
   buildCreateTrackerInput,
@@ -20,7 +20,7 @@ import content from '../content.json';
 
 export function CreateTrackerDialog({ defaultDate, isCompact = false }: CreateTrackerDialogProps) {
   const [open, setOpen] = useState(false);
-  const { projects, isLoading: isLoadingProjects, error: projectsError } = useProjectsOptions(open);
+  const { data: projects = [], isLoading: isLoadingProjects, error: projectsError } = useProjects(open);
   const form = useForm<TrackerFormValues>({
     defaultValues: createTrackerFormDefaults(defaultDate),
     resolver: zodResolver(trackerFormSchema)

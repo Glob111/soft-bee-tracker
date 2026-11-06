@@ -1,4 +1,9 @@
+'use client';
+
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+
 import { mapProjectRowToProject, mapProjectToProjectRow, PROJECT_COLUMNS } from '@/lib/api/projects/mappers';
+import { projectKeys } from '@/lib/api/projects/queries';
 import type { CreateProjectInput, Project, UpdateProjectStatusInput } from '@/lib/api/projects/types';
 import { createBrowserClient } from '@/lib/supabase/client';
 import type { ApiError } from '@/types/api-error';
@@ -54,4 +59,21 @@ export async function updateProjectStatus({ projectId, status }: UpdateProjectSt
   }
 
   return mapProjectRowToProject(data);
+}
+
+export function useCreateProject() {
+  return useProjectMutation(createProject);
+}
+
+export function useUpdateProjectStatus() {
+  return useProjectMutation(updateProjectStatus);
+}
+
+function useProjectMutation<TInput>(mutationFn: (input: TInput) => Promise<Project>) {
+  const queryClient = useQueryClient();
+
+  return useMutation<Project, ApiError, TInput>({
+    mutationFn,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: projectKeys.all })
+  });
 }

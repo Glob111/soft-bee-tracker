@@ -3,6 +3,8 @@
 import { useTheme } from 'next-themes';
 import { Toaster as Sonner, type ToasterProps } from 'sonner';
 
+const TOAST_DURATION_MS = 2500;
+
 export function Toaster({ ...props }: ToasterProps) {
   const { resolvedTheme } = useTheme();
 
@@ -10,6 +12,7 @@ export function Toaster({ ...props }: ToasterProps) {
     <Sonner
       theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
       className='toaster group'
+      duration={TOAST_DURATION_MS}
       toastOptions={{
         classNames: {
           toast:

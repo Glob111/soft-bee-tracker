@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createProject } from './mutations';
+import { createProject, updateProjectStatus } from './mutations';
 import { getProjects, getUserProjects } from './queries';
 import type { CreateProjectInput } from './types';
 
@@ -112,6 +112,40 @@ describe('projects requests', () => {
     await expect(createProject(projectInput)).rejects.toEqual({
       message: 'You must be signed in to create a project',
       statusCode: 401
+    });
+  });
+
+  it('updates only the status of the requested project', async () => {
+    const update = vi.fn();
+    const equal = vi.fn();
+    const single = vi.fn().mockResolvedValue({ data: { ...projectRow, status: 'archived' }, error: null, status: 200 });
+    update.mockReturnValue({ eq: equal });
+    equal.mockReturnValue({ select: vi.fn().mockReturnValue({ single }) });
+    createBrowserClient.mockReturnValue({ from: vi.fn().mockReturnValue({ update }) });
+
+    const project = await updateProjectStatus({ projectId: 'project-1', status: 'archived' });
+
+    expect(update).toHaveBeenCalledWith({ status: 'archived' });
+    expect(equal).toHaveBeenCalledWith('id', 'project-1');
+    expect(project.status).toBe('archived');
+  });
+
+  it('preserves the Supabase response status when a status update fails', async () => {
+    createBrowserClient.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        update: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            select: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({ data: null, error: { message: 'Permission denied' }, status: 403 })
+            })
+          })
+        })
+      })
+    });
+
+    await expect(updateProjectStatus({ projectId: 'project-1', status: 'archived' })).rejects.toEqual({
+      message: 'Permission denied',
+      statusCode: 403
     });
   });
 

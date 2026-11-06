@@ -14,30 +14,36 @@ import { Badge } from '@ui/badge';
 import { Button } from '@ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@ui/dropdown-menu';
 import { Tabs, TabsList, TabsTrigger } from '@ui/tabs';
-import { useUserProjectsList } from '@/hooks/use-user-projects-list';
-import { useUpdateProjectStatusStore } from '@/lib/api/projects';
+import { useUpdateProjectStatus, useUserProjects } from '@/lib/api/projects';
 import type { Project, ProjectStatus, ProjectType } from '@/lib/api/projects';
 import type { ApiError } from '@/types/api-error';
 import { formatText } from '@/lib/format-text';
 import content from './content.json';
 
 export function UserProjectsList() {
-  const { userProjects, isLoading, error, reload } = useUserProjectsList();
+  const { data: userProjects = [], isLoading, error, refetch } = useUserProjects();
   const [statusFilter, setStatusFilter] = useState<ProjectStatus>('active');
   const [pendingChange, setPendingChange] = useState<PendingStatusChange | null>(null);
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
-  const updateProjectStatus = useUpdateProjectStatusStore((state) => state.updateProjectStatus);
-  const updatingProjectId = useUpdateProjectStatusStore((state) => state.updatingProjectId);
+  const updateProjectStatus = useUpdateProjectStatus();
+  const updatingProjectId = updateProjectStatus.isPending ? (updateProjectStatus.variables?.projectId ?? null) : null;
   const visibleProjects = userProjects.filter((project) => project.status === statusFilter);
 
-  async function changeProjectStatus(project: Project, status: ProjectStatus) {
-    try {
-      await updateProjectStatus({ projectId: project.id, status });
+  function changeProjectStatus({ project, status }: PendingStatusChange) {
+    function handleStatusChanged() {
       toast.success(formatText(status === 'archived' ? content.list.archived : content.list.restored, { name: project.name }));
       setIsStatusDialogOpen(false);
-    } catch {
-      toast.error(useUpdateProjectStatusStore.getState().updateError?.message ?? content.list.updateFailed);
     }
+
+    function handleStatusChangeFailed(updateError: ApiError) {
+      toast.error(updateError.message || content.list.updateFailed);
+    }
+
+    updateProjectStatus.mutate({ projectId: project.id, status }, { onSuccess: handleStatusChanged, onError: handleStatusChangeFailed });
+  }
+
+  function handleRetry() {
+    void refetch();
   }
 
   function requestStatusChange(project: Project, status: ProjectStatus) {
@@ -55,7 +61,7 @@ export function UserProjectsList() {
 
   function handleStatusConfirm() {
     if (pendingChange) {
-      void changeProjectStatus(pendingChange.project, pendingChange.status);
+      changeProjectStatus(pendingChange);
     }
   }
 
@@ -78,7 +84,7 @@ export function UserProjectsList() {
         projects={visibleProjects}
         statusFilter={statusFilter}
         updatingProjectId={updatingProjectId}
-        onRetry={reload}
+        onRetry={handleRetry}
         onArchive={handleArchiveRequest}
         onRestore={handleRestoreRequest}
       />

@@ -11,7 +11,7 @@ import { ListSkeleton } from '@components/common/loading-state/skeletons';
 import { CreateTrackerDialog } from '@components/tracker/create-tracker-dialog/create-tracker-dialog';
 import { TrackerEntryRow } from '@components/tracker/day-entries/tracker-entry-row';
 import { EditTrackerDialog } from '@components/tracker/edit-tracker-dialog/edit-tracker-dialog';
-import { useProjectsOptions } from '@/hooks/use-projects-options';
+import { useProjects } from '@/lib/api/projects';
 import { useActiveLiveTracker, useDeleteTracker, useRestartLiveTracker } from '@/lib/api/trackers';
 import type { Tracker } from '@/lib/api/trackers';
 import { formatClock, formatDuration } from '@/lib/format-duration';
@@ -23,7 +23,7 @@ import content from '../content.json';
 export function DayEntries({ selectedDate, onSelectDate, trackers, minutesByDate, now, isLoading, error, onRetry }: DayEntriesProps) {
   const [pendingAction, setPendingAction] = useState<PendingEntryAction | null>(null);
   const [isActionDialogOpen, setIsActionDialogOpen] = useState(false);
-  const { projects } = useProjectsOptions(true);
+  const { data: projects = [] } = useProjects();
   const { data: activeTracker } = useActiveLiveTracker();
   const restartTracker = useRestartLiveTracker();
   const deleteTracker = useDeleteTracker({ onSuccess: handleDeleted });

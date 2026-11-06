@@ -9,7 +9,7 @@ import { StartLiveTrackerDialog } from '@components/tracker/live-tracker/start-l
 import { Button } from '@ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/tooltip';
 import { useNow } from '@/hooks/use-now';
-import { useProjectsOptions } from '@/hooks/use-projects-options';
+import { useProjects } from '@/lib/api/projects';
 import { useActiveLiveTracker, useDiscardLiveTracker, usePauseLiveTracker, useResumeLiveTracker } from '@/lib/api/trackers';
 import type { Tracker } from '@/lib/api/trackers';
 import { formatDuration } from '@/lib/format-duration';
@@ -37,7 +37,7 @@ function ActiveTimer({ tracker }: { tracker: Tracker }) {
   const [isDiscardOpen, setIsDiscardOpen] = useState(false);
   const [isFinishOpen, setIsFinishOpen] = useState(false);
   const [finishOpenedAt, setFinishOpenedAt] = useState(0);
-  const { projects } = useProjectsOptions(true);
+  const { data: projects = [] } = useProjects();
   const pauseTracker = usePauseLiveTracker();
   const resumeTracker = useResumeLiveTracker();
   const discardTracker = useDiscardLiveTracker();

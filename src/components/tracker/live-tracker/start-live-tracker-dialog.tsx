@@ -10,7 +10,7 @@ import { Button } from '@ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@ui/dialog';
 import { Field, FieldError, FieldGroup, FieldLabel } from '@ui/field';
 import { Textarea } from '@ui/textarea';
-import { useProjectsOptions } from '@/hooks/use-projects-options';
+import { useProjects } from '@/lib/api/projects';
 import { useStartLiveTracker } from '@/lib/api/trackers';
 import {
   buildStartLiveTrackerInput,
@@ -22,7 +22,7 @@ import content from '../content.json';
 
 export function StartLiveTrackerDialog() {
   const [open, setOpen] = useState(false);
-  const { projects, isLoading: isLoadingProjects, error: projectsError } = useProjectsOptions(open);
+  const { data: projects = [], isLoading: isLoadingProjects, error: projectsError } = useProjects(open);
   const {
     control,
     formState: { errors },
