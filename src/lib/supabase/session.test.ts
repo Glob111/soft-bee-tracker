@@ -40,7 +40,7 @@ describe('updateSession', () => {
     const response = await updateSession(buildRequest('/tracker?tab=week'));
 
     expect(response.status).toBe(307);
-    expect(response.headers.get('location')).toBe(`http://localhost:3000${ROUTES.LOGIN}`);
+    expect(response.headers.get('location')).toBe(`http://localhost:3000${ROUTES.LOGIN}?next=%2Ftracker%3Ftab%3Dweek`);
   });
 
   it('treats a claims error as signed out', async () => {
@@ -48,7 +48,7 @@ describe('updateSession', () => {
 
     const response = await updateSession(buildRequest(ROUTES.DASHBOARD));
 
-    expect(response.headers.get('location')).toBe(`http://localhost:3000${ROUTES.LOGIN}`);
+    expect(response.headers.get('location')).toBe(`http://localhost:3000${ROUTES.LOGIN}?next=%2Fdashboard`);
   });
 
   it('lets signed-out users open public routes', async () => {
@@ -76,6 +76,39 @@ describe('updateSession', () => {
 
     expect(response.status).toBe(403);
     expect(response.headers.get('x-middleware-rewrite')).toBe(`http://localhost:3000${ROUTES.ACCESS_DENIED}`);
+  });
+
+  it('answers a client navigation to a denied route with 200 so the router renders it in place', async () => {
+    signedInAs('worker');
+
+    const response = await updateSession(buildRequest(ROUTES.CREW, { 'sec-fetch-dest': 'empty' }));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('x-middleware-rewrite')).toBe(`http://localhost:3000${ROUTES.ACCESS_DENIED}`);
+  });
+
+  it('keeps 403 for a browser document load of a denied route', async () => {
+    signedInAs('worker');
+
+    const response = await updateSession(buildRequest(ROUTES.CREW, { 'sec-fetch-dest': 'document' }));
+
+    expect(response.status).toBe(403);
+  });
+
+  it('sends a signed-in user on login to a safe next path', async () => {
+    signedInAs('manager');
+
+    const response = await updateSession(buildRequest(`${ROUTES.LOGIN}?next=%2Fcrew`));
+
+    expect(response.headers.get('location')).toBe(`http://localhost:3000${ROUTES.CREW}`);
+  });
+
+  it('ignores an external next on login', async () => {
+    signedInAs('manager');
+
+    const response = await updateSession(buildRequest(`${ROUTES.LOGIN}?next=%2F%2Fevil.example`));
+
+    expect(response.headers.get('location')).toBe(`http://localhost:3000${ROUTES.DASHBOARD}`);
   });
 
   it('denies restricted routes when the role claim is missing', async () => {
@@ -118,8 +151,8 @@ describe('updateSession', () => {
   });
 });
 
-function buildRequest(path: string): NextRequest {
-  return new NextRequest(new URL(path, 'http://localhost:3000'));
+function buildRequest(path: string, headers: Record<string, string> = {}): NextRequest {
+  return new NextRequest(new URL(path, 'http://localhost:3000'), { headers });
 }
 
 function signedOut() {

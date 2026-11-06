@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChartColumnIcon, ClockIcon, FolderKanbanIcon, HexagonIcon, UsersIcon, type LucideIcon } from 'lucide-react';
+import { ChartColumnIcon, ClockIcon, FolderKanbanIcon, HexagonIcon, UserCogIcon, UsersIcon, type LucideIcon } from 'lucide-react';
 
 import {
   Sidebar,
@@ -92,7 +92,8 @@ const NAV_ITEMS: NavItem[] = [
   { title: 'Tracker', href: ROUTES.TRACKER, icon: ClockIcon },
   { title: 'Crew', href: ROUTES.CREW, icon: UsersIcon },
   { title: 'Reports', href: ROUTES.REPORTS, icon: ChartColumnIcon },
-  { title: 'Projects', href: ROUTES.PROJECTS, icon: FolderKanbanIcon }
+  { title: 'Projects', href: ROUTES.PROJECTS, icon: FolderKanbanIcon },
+  { title: 'Users', href: ROUTES.USERS, icon: UserCogIcon }
 ];
 
 interface NavItem {

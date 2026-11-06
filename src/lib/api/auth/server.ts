@@ -7,7 +7,7 @@ import { createServerClient } from '@/lib/supabase/server';
 import { mapUserRowToProfile, USER_COLUMNS } from '@/lib/api/auth/mappers';
 import type { UserProfile } from '@/lib/api/auth/types';
 import type { ApiError } from '@/types/api-error';
-import { getRouteAccess, getRouteSessionFromClaim, type RouteSession } from '@/lib/route-access';
+import { buildLoginPath, getRouteAccess, getRouteSessionFromClaim, type RouteSession } from '@/lib/route-access';
 
 // server-component/route-handler counterpart of useSessionProfile.
 // imported via '@/lib/api/auth/server' (not the barrel) so client bundles
@@ -58,25 +58,38 @@ export async function getRouteSession(): Promise<RouteSession | null> {
   return error || !data ? null : getRouteSessionFromClaim(data.claims.user_role);
 }
 
-// defense in depth for role-restricted pages: the proxy already blocks these
-// routes, but the page re-checks with the same decision (getRouteAccess) and
-// the same role source, so it stays protected if the proxy matcher drifts.
-// it then loads the profile only to cut blocked users (getSessionProfile);
-// the role itself never comes from public.users.
-export async function requireRouteAccess(pathname: string): Promise<void> {
+/**
+ * Page guard; call it at the top of every app page.tsx.
+ *
+ * It does not decide roles itself: it applies ROLE_RESTRICTED_ROUTES through
+ * getRouteAccess, the same decision and the same user_role claim the proxy
+ * uses. A route missing from that map is open to every signed-in role, so
+ * restricting a page means adding it there (route-access.test.ts enforces a
+ * decision for every ROUTES entry).
+ *
+ * On top of the proxy it adds two checks the claim can't carry: getUser() asks
+ * the Auth server, so a revoked session is caught even when getClaims verified
+ * the JWT locally, and getSessionProfile() cuts blocked users. The role itself
+ * never comes from public.users.
+ */
+export async function requireRouteAccess(pathname: string): Promise<UserProfile> {
   const access = getRouteAccess(pathname, await getRouteSession());
 
   if (access === 'login') {
-    redirect(ROUTES.LOGIN);
+    redirect(buildLoginPath(pathname));
   }
 
   if (access === 'denied') {
     redirect(ROUTES.ACCESS_DENIED);
   }
 
-  if (!(await getSessionProfile())) {
-    redirect(ROUTES.LOGIN);
+  const profile = await getSessionProfile();
+
+  if (!profile) {
+    redirect(buildLoginPath(pathname));
   }
+
+  return profile;
 }
 
 // postgREST code for .single() matching zero rows

@@ -1,7 +1,11 @@
 import { CreateProjectDialog } from '@components/projects/create-project-dialog/create-project-dialog';
 import { UserProjectsList } from '@components/projects/user-projects-list';
+import { ROUTES } from '@/constants';
+import { requireRouteAccess } from '@/lib/api/auth/server';
 
-export default function ProjectsPage() {
+export default async function ProjectsPage() {
+  await requireRouteAccess(ROUTES.PROJECTS);
+
   return (
     <div className='mx-auto flex w-full max-w-lg flex-col gap-6'>
       <div className='flex items-center justify-between gap-4'>

@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import { ROUTES } from '@/constants';
+import { ALL_ROLES, ROUTES } from '@/constants';
 import type { UserRole } from '@/lib/api/auth/types';
-import { canRoleAccessRoute, getRouteAccess, parseUserRole, type RouteAccess } from '@/lib/route-access';
+import {
+  buildLoginPath,
+  canRoleAccessRoute,
+  getRouteAccess,
+  getSafeRedirectPath,
+  parseUserRole,
+  type RouteAccess
+} from '@/lib/route-access';
 
 const APP_ROUTES = [ROUTES.DASHBOARD, ROUTES.TRACKER, ROUTES.PROFILE, ROUTES.PROJECTS, ROUTES.CREW, ROUTES.REPORTS, ROUTES.USERS];
 
@@ -36,6 +43,43 @@ const EXPECTED_ACCESS: Record<UserRole, Record<string, RouteAccess>> = {
     [ROUTES.USERS]: 'allowed'
   }
 };
+
+// every ROUTES key must be classified here; the Record type fails typecheck
+// when a route is added without a decision, so requireRouteAccess on a new page
+// can't silently mean "any signed-in role" by accident
+const ROUTE_CLASSIFICATION: Record<keyof typeof ROUTES, 'public' | readonly UserRole[]> = {
+  HOME: ALL_ROLES,
+  LOGIN: 'public',
+  REGISTER: 'public',
+  FORGOT_PASSWORD: 'public',
+  AUTH_CONFIRM: 'public',
+  UPDATE_PASSWORD: 'public',
+  SIGN_OUT: 'public',
+  ACCESS_DENIED: 'public',
+  DASHBOARD: ALL_ROLES,
+  PROJECTS: ALL_ROLES,
+  TRACKER: ALL_ROLES,
+  PROFILE: ALL_ROLES,
+  CREW: ['manager', 'admin'],
+  REPORTS: ['manager', 'admin'],
+  USERS: ['admin']
+};
+
+describe('route classification', () => {
+  it.each(Object.entries(ROUTE_CLASSIFICATION))('%s matches the route rules', (key, classification) => {
+    const route = ROUTES[key as keyof typeof ROUTES];
+
+    if (classification === 'public') {
+      expect(getRouteAccess(route, null)).toBe('allowed');
+      return;
+    }
+
+    expect(getRouteAccess(route, null)).toBe('login');
+    for (const role of ALL_ROLES) {
+      expect(canRoleAccessRoute(route, role)).toBe(classification.includes(role));
+    }
+  });
+});
 
 describe('getRouteAccess', () => {
   describe.each(Object.entries(EXPECTED_ACCESS))('as %s', (role, expectations) => {
@@ -104,5 +148,38 @@ describe('parseUserRole', () => {
 
   it.each([null, undefined, '', 'Admin', 'superuser'])('rejects %s', (value) => {
     expect(parseUserRole(value)).toBeNull();
+  });
+});
+
+describe('getSafeRedirectPath', () => {
+  it.each(['/crew', '/tracker?tab=week', '/users/42/edit#top'])('keeps the app path %s', (value) => {
+    expect(getSafeRedirectPath(value)).toBe(value);
+  });
+
+  it.each([
+    null,
+    undefined,
+    '',
+    'crew',
+    'https://evil.example',
+    '//evil.example',
+    '/\\evil.example',
+    '/',
+    ROUTES.LOGIN,
+    `${ROUTES.LOGIN}?next=/crew`,
+    ROUTES.SIGN_OUT
+  ])('rejects %s', (value) => {
+    expect(getSafeRedirectPath(value)).toBeNull();
+  });
+});
+
+describe('buildLoginPath', () => {
+  it('carries the requested page in next', () => {
+    expect(buildLoginPath('/tracker?tab=week')).toBe(`${ROUTES.LOGIN}?next=%2Ftracker%3Ftab%3Dweek`);
+  });
+
+  it('drops an unsafe or pointless next', () => {
+    expect(buildLoginPath('/')).toBe(ROUTES.LOGIN);
+    expect(buildLoginPath('//evil.example')).toBe(ROUTES.LOGIN);
   });
 });

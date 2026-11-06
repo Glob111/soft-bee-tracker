@@ -135,20 +135,20 @@ Components import hooks from `@/lib/api/<feature>`. They must not call Supabase,
 
 | Result | Response |
 |--------|----------|
-| No session on a protected route | Redirect to `/login` |
-| Signed in on `/login` or `/register` | Redirect to `/dashboard` |
-| Role not allowed | Rewrite to `/access-denied` with status 403 (the URL stays the same) |
+| No session on a protected route | Redirect to `/login?next=<requested page>`; after sign-in the user lands back there |
+| Signed in on `/login` or `/register` | Redirect to a safe `next` path, else `/dashboard` |
+| Role not allowed | Rewrite to `/access-denied` (the URL stays the same): status 403 on a page load, 200 on an in-app navigation so the router renders it in place |
 
-Role-restricted pages also call `requireRouteAccess(ROUTES.X)` from `@/lib/api/auth/server` at the top of `page.tsx`. It re-runs the proxy's `getRouteAccess` decision with the role from the same verified `user_role` claim, so the page stays protected even if the proxy matcher drifts: no session redirects to `/login`, and a wrong role redirects to `/access-denied`.
+Every app page calls `requireRouteAccess(ROUTES.X)` from `@/lib/api/auth/server` at the top of `page.tsx`. It re-runs the proxy's `getRouteAccess` decision with the role from the same verified `user_role` claim, then loads the profile: `getUser()` asks the Auth server (catching revoked sessions that a locally verified JWT can't), and a blocked user or a session without a profile row is sent to `/auth/sign-out`, which clears the cookies and returns to `/login`. No session redirects to `/login`, and a wrong role redirects to `/access-denied`. A session with no role is offered "Sign in again" there, since only a new token carries a new claim.
 
-The sidebar (`src/components/layout/app-sidebar/app-sidebar.tsx`) uses the same rules to hide links a role can't open.
+The sidebar (`src/components/layout/app-sidebar/app-sidebar.tsx`) uses the same rules and the same claim to hide links a role can't open.
 
-The access rules live in `src/constants/index.ts`: `PUBLIC_ROUTES_LIST`, `GUEST_ONLY_ROUTES_LIST` and `ROLE_RESTRICTED_ROUTES`. To restrict a new page, add it to `ROLE_RESTRICTED_ROUTES` and to the matrix in `src/lib/route-access.test.ts`, then call `requireRouteAccess` in its `page.tsx`. The proxy, page checks and sidebar all read the role from the `user_role` claim (`getRouteSessionFromClaim`), never from `public.users`, so they can't disagree. A missing or unknown role is denied. Hiding a page is not data security: RLS still decides what each request can read or write.
+The access rules live in `src/constants/index.ts`: `PUBLIC_ROUTES_LIST`, `GUEST_ONLY_ROUTES_LIST` and `ROLE_RESTRICTED_ROUTES`. `requireRouteAccess` does not restrict anything by itself: a route missing from `ROLE_RESTRICTED_ROUTES` is open to every signed-in role. To add a page, add it to `ROUTES`, classify it in `ROUTE_CLASSIFICATION` in `src/lib/route-access.test.ts` (typecheck fails until you do), add it to `ROLE_RESTRICTED_ROUTES` if it is role-restricted, and call `requireRouteAccess` in its `page.tsx`. The proxy, page checks and sidebar all read the role from the `user_role` claim (`getRouteSessionFromClaim`), never from `public.users`, so they can't disagree. A missing or unknown role is denied. Hiding a page is not data security: RLS still decides what each request can read or write.
 
 #### Verify route protection
 
 1. `yarn test` runs the route matrix (`src/lib/route-access.test.ts`), the proxy responses and cookie handling (`src/lib/supabase/session.test.ts`), and the page check (`src/lib/api/auth/server.test.ts`).
-2. With `yarn dev` and the seeded [test accounts](#test-accounts): signed out, every app route redirects to `/login`. As `worker@softbee.dev`, `/crew`, `/reports` and `/users` show the access-denied page with status 403, and the sidebar shows only Tracker and Projects. As `manager@softbee.dev`, `/crew` and `/reports` open and only `/users` is denied. As `admin@softbee.dev`, every route opens.
+2. With `yarn dev` and the seeded [test accounts](#test-accounts): signed out, every app route redirects to `/login`. As `worker@softbee.dev`, `/crew`, `/reports` and `/users` show the access-denied page with status 403, and the sidebar shows only Tracker and Projects. As `manager@softbee.dev`, `/crew` and `/reports` open and only `/users` is denied. As `admin@softbee.dev`, every route opens and the sidebar adds Crew, Reports and Users. Signed out, open `/tracker?tab=week`, sign in, and you land back on it.
 3. Direct API requests ignore the UI. Sign in through `POST /auth/v1/token?grant_type=password`, then call `/rest/v1/users` with the access token. Each user, any role, sees only their own row, and the anon key sees none.
 
 ### State management

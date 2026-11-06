@@ -2,8 +2,8 @@ import type { CookieOptions } from '@supabase/ssr';
 import { createServerClient } from '@supabase/ssr';
 import { type NextRequest, NextResponse } from 'next/server';
 
-import { ROUTES } from '@/constants';
-import { getRouteAccess, getRouteSessionFromClaim } from '@/lib/route-access';
+import { NEXT_PARAM, ROUTES } from '@/constants';
+import { buildLoginPath, getRouteAccess, getRouteSessionFromClaim, getSafeRedirectPath } from '@/lib/route-access';
 import { Database } from '@/types';
 
 function applyResponseCookies(source: NextResponse, target: NextResponse) {
@@ -54,19 +54,33 @@ export async function updateSession(request: NextRequest) {
   const access = getRouteAccess(request.nextUrl.pathname, session);
 
   if (access === 'login') {
-    return withSessionCookies(supabaseResponse, NextResponse.redirect(buildUrl(request, ROUTES.LOGIN)));
+    const { pathname, search } = request.nextUrl;
+    return withSessionCookies(supabaseResponse, NextResponse.redirect(new URL(buildLoginPath(`${pathname}${search}`), request.url)));
   }
 
   if (access === 'guest-only') {
-    return withSessionCookies(supabaseResponse, NextResponse.redirect(buildUrl(request, ROUTES.DASHBOARD)));
+    // already signed in (e.g. a second tab): finish the deep link instead of the dashboard
+    const nextPath = getSafeRedirectPath(request.nextUrl.searchParams.get(NEXT_PARAM)) ?? ROUTES.DASHBOARD;
+    return withSessionCookies(supabaseResponse, NextResponse.redirect(new URL(nextPath, request.url)));
   }
 
   if (access === 'denied') {
-    // rewrite keeps the requested URL in the address bar and answers 403
-    return withSessionCookies(supabaseResponse, NextResponse.rewrite(buildUrl(request, ROUTES.ACCESS_DENIED), { status: 403 }));
+    // rewrite keeps the requested URL in the address bar. a document load
+    // answers 403; a client navigation (RSC fetch) must answer 200, because the
+    // app router drops a non-OK RSC response and the click silently does nothing
+    const init = isDocumentRequest(request) ? { status: 403 } : undefined;
+    return withSessionCookies(supabaseResponse, NextResponse.rewrite(buildUrl(request, ROUTES.ACCESS_DENIED), init));
   }
 
   return supabaseResponse;
+}
+
+// next strips its own rsc header before the proxy runs, so use the browser's
+// sec-fetch-dest: 'document' for page loads, 'empty' for router fetches.
+// clients that don't send it (curl, old browsers) get the document answer.
+function isDocumentRequest(request: NextRequest): boolean {
+  const fetchDest = request.headers.get('sec-fetch-dest');
+  return fetchDest === null || fetchDest === 'document';
 }
 
 function buildUrl(request: NextRequest, pathname: string): URL {

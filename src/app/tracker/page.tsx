@@ -1,16 +1,10 @@
-import { redirect } from 'next/navigation';
-
 import { CreateTrackerDialog } from '@components/tracker/create-tracker-dialog/create-tracker-dialog';
 import { TrackersList } from '@components/tracker/trackers-list';
 import { ROUTES } from '@/constants';
-import { getSessionProfile } from '@/lib/api/auth/server';
+import { requireRouteAccess } from '@/lib/api/auth/server';
 
 export default async function TrackerPage() {
-  const profile = await getSessionProfile();
-
-  if (!profile) {
-    redirect(ROUTES.LOGIN);
-  }
+  await requireRouteAccess(ROUTES.TRACKER);
 
   return (
     <div className='mx-auto flex w-full max-w-lg flex-col gap-6'>

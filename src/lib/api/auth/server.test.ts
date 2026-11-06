@@ -99,10 +99,10 @@ describe('requireRouteAccess', () => {
     vi.clearAllMocks();
   });
 
-  it('redirects to login without a session', async () => {
+  it('redirects to login with the page in next without a session', async () => {
     getClaims.mockResolvedValue({ data: null, error: null });
 
-    await expect(requireRouteAccess(ROUTES.CREW)).rejects.toThrow(`NEXT_REDIRECT:${ROUTES.LOGIN}`);
+    await expect(requireRouteAccess(ROUTES.CREW)).rejects.toThrow(`NEXT_REDIRECT:${ROUTES.LOGIN}?next=%2Fcrew`);
   });
 
   it.each<[string, UserRole]>([
@@ -129,7 +129,7 @@ describe('requireRouteAccess', () => {
   ])('allows %s for %s', async (route, role) => {
     signInAs(role);
 
-    await expect(requireRouteAccess(route)).resolves.toBeUndefined();
+    await expect(requireRouteAccess(route)).resolves.toMatchObject({ id: 'user-1' });
     expect(redirect).not.toHaveBeenCalled();
   });
 
@@ -137,6 +137,19 @@ describe('requireRouteAccess', () => {
     signInAs('admin', { is_blocked: true });
 
     await expect(requireRouteAccess(ROUTES.USERS)).rejects.toThrow(`NEXT_REDIRECT:${ROUTES.SIGN_OUT}`);
+  });
+
+  it('lets every role open a session-only page', async () => {
+    signInAs('worker');
+
+    await expect(requireRouteAccess(ROUTES.TRACKER)).resolves.toMatchObject({ id: 'user-1' });
+  });
+
+  it('redirects to login when the Auth server rejects the session', async () => {
+    signInAs('worker');
+    getUser.mockResolvedValue({ data: { user: null }, error: new Error('session revoked') });
+
+    await expect(requireRouteAccess(ROUTES.DASHBOARD)).rejects.toThrow(`NEXT_REDIRECT:${ROUTES.LOGIN}?next=%2Fdashboard`);
   });
 
   it('checks the role before loading the profile', async () => {

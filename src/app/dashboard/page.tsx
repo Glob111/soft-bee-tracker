@@ -1,8 +1,11 @@
 import Link from 'next/link';
 
 import { ROUTES } from '@/constants';
+import { requireRouteAccess } from '@/lib/api/auth/server';
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  await requireRouteAccess(ROUTES.DASHBOARD);
+
   return (
     <div className='mx-auto flex w-full max-w-lg flex-col gap-6 text-center'>
       <h1 className='text-3xl font-semibold tracking-tight'>Dashboard</h1>

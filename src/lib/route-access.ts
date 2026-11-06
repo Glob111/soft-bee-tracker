@@ -1,4 +1,4 @@
-import { ALL_ROLES, GUEST_ONLY_ROUTES_LIST, PUBLIC_ROUTES_LIST, ROLE_RESTRICTED_ROUTES } from '@/constants';
+import { ALL_ROLES, GUEST_ONLY_ROUTES_LIST, NEXT_PARAM, PUBLIC_ROUTES_LIST, ROLE_RESTRICTED_ROUTES, ROUTES } from '@/constants';
 import type { UserRole } from '@/lib/api/auth/types';
 
 /**
@@ -36,6 +36,30 @@ export function getRouteSessionFromClaim(roleClaim: string | null | undefined): 
 
 export function parseUserRole(value: string | null | undefined): UserRole | null {
   return ALL_ROLES.find((role) => role === value) ?? null;
+}
+
+// login URL that brings the user back to where they were going after sign-in
+export function buildLoginPath(nextPath: string): string {
+  const safeNext = getSafeRedirectPath(nextPath);
+
+  return safeNext ? `${ROUTES.LOGIN}?${NEXT_PARAM}=${encodeURIComponent(safeNext)}` : ROUTES.LOGIN;
+}
+
+// only same-origin app paths: rejects absolute URLs, protocol-relative (//host)
+// and backslash tricks (/\host) that browsers treat as another origin.
+// auth pages themselves are dropped so login can't send you back to login.
+export function getSafeRedirectPath(value: string | null | undefined): string | null {
+  if (!value || !value.startsWith('/') || value.startsWith('//') || value.startsWith('/\\')) {
+    return null;
+  }
+
+  const pathname = value.split(/[?#]/)[0];
+
+  if (pathname === '/' || matchesRouteList(pathname, PUBLIC_ROUTES_LIST)) {
+    return null;
+  }
+
+  return value;
 }
 
 export function matchesRoute(pathname: string, route: string): boolean {
