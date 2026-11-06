@@ -4,6 +4,9 @@ import type { Database } from '@/types';
 type TrackerRow = Database['public']['Tables']['trackers']['Row'];
 type InputTrackerRow = Database['public']['Tables']['trackers']['Insert'];
 
+export const TRACKER_COLUMNS =
+  'id, created_at, updated_at, date, description, duration_minutes, is_live, live_duration_minutes, live_status, status, start_live_date, project_id, user_id, transaction_id';
+
 export function mapTrackerRowToTracker(row: TrackerRow): Tracker {
   return {
     id: row.id,

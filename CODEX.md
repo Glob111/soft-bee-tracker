@@ -8,13 +8,13 @@
 
 ## State and data access
 
-- UI components must consume domain hooks/stores and must not call Supabase or `fetch` directly.
-- Use the state owner already established for a domain: TanStack Query or Zustand; never duplicate the same remote data in both.
-- Keep Zustand stores separated by entity.
-- Keep independent get/create operations in separate stores so their loading and error states do not interfere.
-- Keep pure reads in `queries.ts`, pure writes in `mutations.ts`, row mapping in `mappers.ts`, and domain contracts in `types.ts`.
+- UI components must consume domain TanStack Query hooks and must not call Supabase or `fetch` directly.
+- Use TanStack Query for all server data and CRUD; do not use Zustand for CRUD.
+- Use Zustand only for ephemeral UI state in `src/features/<name>/store/`.
+- Existing Zustand stores under `src/lib/api/**` (`projects`, `project-rates`, `auth` profile) predate this decision: do not add new domain stores or extend them.
+- Keep pure reads in `queries.ts`, pure writes in `mutations.ts`, and domain contracts in `types.ts`. Domain types alias generated `Database` types. Add `mappers.ts` only when a value changes at runtime; see `.cursor/rules/lib-services.mdc`.
 - Normalize async failures to `ApiError` and preserve the Supabase response status.
-- Add or update Vitest coverage for store success, failure, and overlapping-request behavior.
+- Add or update Vitest coverage for query and mutation helpers: success and failure (normalized `ApiError`).
 
 ## Scope filter for frontend conventions
 

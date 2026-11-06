@@ -2,7 +2,9 @@
 
 # This is NOT the Next.js you know
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
 
@@ -17,10 +19,11 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 - Keep Supabase access in `src/lib/api/<entity>/queries.ts` and `mutations.ts`; UI code must not call Supabase directly.
 - Export each domain's public contract through `src/lib/api/<entity>/index.ts`.
-- Zustand-backed domains keep typed stores beside their API files under `src/lib/api/<entity>/`.
-- Keep independent async operations in independent stores (for example, project loading and project creation); do not share one `isLoading` or `error` lifecycle between unrelated operations.
-- Keep entities separate: `projects` and `project-rates` must not share a store or domain types.
-- Do not duplicate the same server data in both TanStack Query and Zustand. Follow the state owner already selected for that domain.
+- Use TanStack Query for all server data and CRUD (`useQuery` reads, `useMutation` writes with cache invalidation). Do not use Zustand for CRUD.
+- Use Zustand only for ephemeral UI state in `src/features/<name>/store/`; never put server data in it.
+- Existing Zustand stores under `src/lib/api/**` (`projects`, `project-rates`, `auth` profile) predate this decision: do not add new domain stores or extend them.
+- Keep entities separate: `projects` and `project-rates` must not share query keys, hooks or domain types.
+- Domain types alias generated `Database` types. Add `mappers.ts` only when a value changes at runtime. See `.cursor/rules/lib-services.mdc`.
 
 ## Database / RLS
 

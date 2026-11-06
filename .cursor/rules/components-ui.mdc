@@ -29,4 +29,4 @@ alwaysApply: false
 # Data access
 
 - Do not call `fetch` or Supabase directly in components.
-- Use the domain's public TanStack Query hook or Zustand store from `@/lib/api/<feature>` (whichever owns that domain).
+- Use the domain's public TanStack Query hooks from `@/lib/api/<feature>`; Zustand selectors only for UI state.

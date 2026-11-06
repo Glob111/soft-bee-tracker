@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { createBrowserClient } from '@/lib/supabase/client';
-import { mapUserRowToProfile } from '@/lib/api/auth/mappers';
+import { mapUserRowToProfile, USER_COLUMNS } from '@/lib/api/auth/mappers';
 import type { UserProfile } from '@/lib/api/auth/types';
 import type { ApiError } from '@/types/api-error';
 
@@ -20,7 +20,7 @@ export async function fetchSessionProfile(): Promise<UserProfile | null> {
     return null;
   }
 
-  const { data, error } = await supabase.from('users').select('*').eq('id', userData.user.id).single();
+  const { data, error } = await supabase.from('users').select(USER_COLUMNS).eq('id', userData.user.id).single();
 
   if (error) {
     throw {

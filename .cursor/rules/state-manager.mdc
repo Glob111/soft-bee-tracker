@@ -6,7 +6,7 @@ alwaysApply: false
 
 # TanStack Query + Zustand Architecture
 
-Separate UI rendering from business logic: server/async data flows through `lib/api/**`, owned per domain by either TanStack Query hooks or typed Zustand stores (never both); ephemeral client UI state lives in feature Zustand stores.
+Separate UI rendering from business logic: server/async data flows through TanStack Query hooks backed by `lib/api/**`; ephemeral client UI state lives in Zustand stores.
 
 ## 1. Global setup
 
@@ -14,14 +14,11 @@ Mount a single `QueryClientProvider` at the app root (`src/providers/query-provi
 
 **QueryClient defaults**: `staleTime: 60_000`, `retry: 1`, `refetchOnWindowFocus: false`.
 
-**Zustand** has two homes; do not combine unrelated entities or features into a global store:
-
-- Domain async state (Zustand-backed domains such as `projects`, `project-rates`, `auth` profile): `src/lib/api/<entity>/store.ts` or `<operation>.store.ts`, exported through the domain `index.ts`.
-- Ephemeral UI state: `src/features/<feature-name>/store/<feature-name>.store.ts`.
+**Zustand**: one store per feature at `src/features/<feature-name>/store/<feature-name>.store.ts`. Do not combine unrelated features into a global store.
 
 ## 2. Query and mutation pattern
 
-Each domain lives under `src/lib/api/<feature>/`. See **lib-services.mdc** for the full file layout (`index.ts`, `queries.ts`, `mutations.ts`, optional `types.ts` / `mappers.ts`).
+Each domain lives under `src/lib/api/<feature>/`. See **lib-services.mdc** for the file layout and for when `mappers.ts` is allowed.
 
 | Concern | Location |
 |---------|----------|
@@ -67,7 +64,7 @@ export async function fetchUser(id: string) {
     throw { message: error.message, statusCode: 500 } satisfies ApiError;
   }
 
-  return { id: data.id, status: data.status, updatedAt: data.updated_at };
+  return data;
 }
 ```
 
@@ -113,20 +110,9 @@ export function useUpdateUser(options?: { onSuccess?: (data: User) => void }) {
 }
 ```
 
-## 3. Zustand stores
+## 3. Zustand client state
 
-### Domain stores (`src/lib/api/<entity>/`)
-
-For domains that use Zustand as the state owner, stores hold the remote data plus its loading/error state. They call the pure helpers from `queries.ts` / `mutations.ts`, expose typed state/actions, and normalize failures to `ApiError`.
-
-- Keep independent operations (e.g. load vs. create) in separate stores so their `isLoading` / `error` do not interfere.
-- Keep entities separate (`projects` and `project-rates` never share a store).
-- Never mirror the same remote collection into a TanStack Query cache.
-- Cover success, failure, and overlapping-request behavior in Vitest (see `src/lib/api/projects/*.test.ts`).
-
-### UI stores (`src/features/<feature-name>/store/`)
-
-UI stores hold synchronous UI state only — never server data. Use narrow selectors; actions are plain store functions.
+Zustand holds synchronous UI state only — never server data TanStack Query already manages. Use narrow selectors; actions are plain store functions.
 
 **Store path**: `src/features/<feature-name>/store/<feature-name>.store.ts`
 
@@ -173,9 +159,9 @@ export function FeaturePanel({ userId }: { userId: string }) {
 ## 4. Architectural rules
 
 **Separation of concerns**
-- Server/async data → `lib/api/**`, owned by TanStack Query hooks or domain Zustand stores (follow the owner already chosen for the domain).
+- Server/async data → TanStack Query hooks in `lib/api/**`.
 - Ephemeral UI state → Zustand stores in `features/**/store/`.
-- Never duplicate the same server data in both TanStack Query and Zustand.
+- Never duplicate query results into Zustand.
 
 **No API code in UI**
 - Components call hooks (`@/lib/api/<feature>`) or Zustand selectors only.
@@ -184,7 +170,7 @@ export function FeaturePanel({ userId }: { userId: string }) {
 **Typed boundaries**
 - Explicit request/response interfaces in `types.ts` or next to helpers.
 - Query keys use `as const` factory objects in `queries.ts` — never inline arrays in components.
-- In TanStack Query domains, hooks return query results directly; do not re-wrap into custom loading/error machines.
+- Hooks return TanStack Query results directly; do not re-wrap into custom loading/error machines.
 
 **Error handling**
 - Helpers throw `{ message, statusCode? } satisfies ApiError`.

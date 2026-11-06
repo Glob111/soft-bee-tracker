@@ -49,7 +49,7 @@ alwaysApply: true
 
 - No direct data calls inside React components, pages, layouts, or render paths.
 - Never call `fetch`, raw API utilities, or Supabase client methods directly from UI components.
-- Client-side data access must go through the domain's public TanStack Query hook or Zustand store exported from `src/lib/api/<entity>/index.ts`; use the state owner already established for that domain, never both.
+- Client-side data access must go through the domain's public TanStack Query hooks exported from `src/lib/api/<entity>/index.ts`. Do not use Zustand for CRUD; Zustand holds ephemeral UI state only.
 - Server components must use dedicated server-side data helpers/actions.
 - In this repo, place data access abstractions under `lib/api/**` and shared fetch logic under `lib/**`.
 - Follow **state-manager.mdc** for TanStack Query + Zustand architecture and **lib-services.mdc** for `lib/api` folder layout.
@@ -63,10 +63,8 @@ src/lib/api/users/
   index.ts       # barrel — re-export public API only
   queries.ts     # query key factory, pure fetch helpers, useQuery hooks
   mutations.ts   # pure write helpers, useMutation hooks
-  get-users.store.ts    # optional — Zustand read state/action (Zustand-backed domains)
-  create-user.store.ts  # optional — Zustand create state/action; split independent lifecycles
-  types.ts       # optional — request/response interfaces when non-trivial
-  mappers.ts     # optional — DB row ↔ domain mapping
+  types.ts       # optional — aliases and Pick/Omit of generated database types
+  mappers.ts     # only when a value changes at runtime
 ```
 
 - **`index.ts`**: single import surface for the feature (`@/lib/api/users`). Do not import deep paths from components.
@@ -74,8 +72,8 @@ src/lib/api/users/
 - **`mutations.ts`**: async write functions (no React in helpers), `use*` mutation hooks, cache invalidation via `useQueryClient`, and `sonner` toasts on error. Add `'use client'` when hooks are present.
 - Pure fetch/mutation helpers must not import React; hooks are thin wrappers that call those helpers.
 - Throw `{ message, statusCode? } satisfies ApiError` from helpers; use `src/types/api-error.ts`.
-- Components, pages, and layouts import hooks and stores only from `@/lib/api/<feature>` — never call Supabase or `fetch` directly.
-- Zustand stores must expose typed state/actions and normalize failures to `ApiError`; do not combine independent get/create lifecycles in one store.
+- Components, pages, and layouts import hooks only from `@/lib/api/<feature>` — never call Supabase or `fetch` directly.
+- Domain types alias generated `Database` types. Add `mappers.ts` only when a value changes at runtime. See **lib-services.mdc**.
 
 ## Supabase client and auth SSR (strict)
 

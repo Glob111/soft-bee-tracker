@@ -56,7 +56,7 @@
 
 - No direct data calls inside React components, pages, layouts, or render paths.
 - Never call `fetch`, raw API utilities, or Supabase client methods directly from UI components.
-- Client-side data access must go through the domain's public TanStack Query hook or Zustand store exported from `src/lib/api/<entity>/index.ts`; use the state owner already established for that domain, never both.
+- Client-side data access must go through the domain's public TanStack Query hooks exported from `src/lib/api/<entity>/index.ts`. Do not use Zustand for CRUD; Zustand holds ephemeral UI state only.
 - Server components must use dedicated server-side data helpers/actions.
 - In this repo, place data access abstractions under `lib/api/**` and shared fetch logic under `lib/**`.
 

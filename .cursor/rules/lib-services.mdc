@@ -22,7 +22,7 @@ alwaysApply: false
 
 # Query and mutation patterns
 
-- Client-side data access goes through TanStack Query hooks or Zustand stores colocated in `lib/api/<feature>/`; use the state owner already established for that domain, never both.
+- Client-side data access goes through TanStack Query hooks colocated in `lib/api/<feature>/`.
 - Server-side data access uses dedicated helpers/actions, not ad hoc calls from components.
 - See **state-manager.mdc** for TanStack Query + Zustand patterns, hook templates, and cache invalidation rules.
 
@@ -34,10 +34,9 @@ Each domain gets a kebab-case folder under `src/lib/api/`. Example — `users/`:
 src/lib/api/users/
   index.ts       # barrel — re-export public API
   queries.ts     # query key factory, read helpers, useQuery hooks
-  mutations.ts   # write helpers, useMutation hooks
-  *.store.ts     # optional — Zustand state/actions (Zustand-backed domains, one per independent lifecycle)
-  types.ts       # optional — request/response interfaces
-  mappers.ts     # optional — DB row ↔ domain mapping
+  mutations.ts     # write helpers, useMutation hooks
+  types.ts       # optional — aliases and Pick/Omit of generated database types
+  mappers.ts     # only when a value changes at runtime
 ```
 
 ### File responsibilities
@@ -47,7 +46,6 @@ src/lib/api/users/
 | `index.ts` | Re-exports from `queries.ts`, `mutations.ts`, and optional `types.ts`. This is the only import path components use (`@/lib/api/users`). |
 | `queries.ts` | `userKeys` factory, pure async read functions, `useUsers` / `useUser` hooks. `'use client'` when hooks are exported. |
 | `mutations.ts` | Pure async write functions, `useUpdateUser` / `useCreateUser` hooks, `queryClient.invalidateQueries`, `toast.error` on failure. `'use client'` when hooks are exported. |
-| `*.store.ts` | Zustand-backed domains only (e.g. `projects`, `project-rates`, `auth` profile). Typed state/actions that call the pure helpers and normalize failures to `ApiError`. Split independent get/create lifecycles into separate stores. |
 
 ### Rules
 
@@ -56,7 +54,32 @@ src/lib/api/users/
 - Throw `{ message, statusCode? } satisfies ApiError` from helpers (`src/types/api-error.ts`).
 - Query keys live in `queries.ts` next to their hooks — not in components.
 - Do not add one-off `fetch` or Supabase calls in `components/`, `app/` pages, or layouts.
-- Larger features may add `types.ts` or `mappers.ts`; keep `index.ts` as the sole public entry.
+- `types.ts` holds aliases and `Pick` / `Omit` of generated types. Add `mappers.ts` only under the Mappers rule below. `index.ts` stays the sole public entry.
+
+## Mappers
+
+A domain type is the generated database type. Alias it, do not copy it.
+
+```typescript
+export type Project = Database['public']['Tables']['projects']['Row'];
+
+export type CreateProjectInput = Pick<
+  Database['public']['Tables']['projects']['Insert'],
+  'name' | 'client' | 'note' | 'picture_url' | 'start_date' | 'end_date' | 'type'
+>;
+```
+
+Enums come from `Database['public']['Enums']`. Queries return the Supabase result directly. Server-owned columns (`manager_id`, `user_id`) are set in the mutation, next to the insert.
+
+Add `mappers.ts` only when a type alias cannot express the conversion because a value changes at runtime:
+
+- a `Json` or text column is parsed into a narrower structure (`users.positions` → `{ titles: string[] } | null`)
+- several rows or an embed are folded into one object
+- a field is derived and has no column
+
+Do not add a mapper to rename `snake_case` to `camelCase`, to copy a row field by field, or to wrap `rows.map`. Omitting columns on write is a `Pick` or `Omit` of `Insert` / `Update`, not a function.
+
+If a mapper exists, it is the only place that conversion happens. A `rows.map(mapOne)` helper is not a second function.
 
 ### Import example
 

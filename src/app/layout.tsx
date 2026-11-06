@@ -14,7 +14,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // app chrome only belongs to signed-in routes; /login and friends render bare
   const profile = await getSessionProfile();
 
-  const userAvatar = profile?.avatarUrl ? profile.avatarUrl : undefined
+  const userAvatar = profile?.avatarUrl ? profile.avatarUrl : undefined;
 
   return (
     <html lang='en' className={cn('font-sans', geist.variable)}>
@@ -26,7 +26,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <SidebarInset>
                 <header className='flex h-12 shrink-0 items-center justify-between gap-2 border-b px-4'>
                   <SidebarTrigger />
-                  <AvatarDropdown avatarUrl={userAvatar} fallback={getUserAvatarFallback({ firstName: profile.firstName, lastName: profile.lastName})} />
+                  <AvatarDropdown
+                    avatarUrl={userAvatar}
+                    fallback={getUserAvatarFallback({ firstName: profile.firstName, lastName: profile.lastName })}
+                  />
                 </header>
                 <main className='flex flex-1 flex-col p-6'>{children}</main>
               </SidebarInset>
