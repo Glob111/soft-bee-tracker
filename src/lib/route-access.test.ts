@@ -164,12 +164,26 @@ describe('getSafeRedirectPath', () => {
     'https://evil.example',
     '//evil.example',
     '/\\evil.example',
+    '/\t/evil.example',
+    '/\n/evil.example',
+    '/\r\n/evil.example',
+    '/\t\\evil.example',
     '/',
     ROUTES.LOGIN,
     `${ROUTES.LOGIN}?next=/crew`,
     ROUTES.SIGN_OUT
   ])('rejects %s', (value) => {
     expect(getSafeRedirectPath(value)).toBeNull();
+  });
+});
+
+describe('getSafeRedirectPath normalization', () => {
+  it('returns the parsed path, not the raw input', () => {
+    expect(getSafeRedirectPath('/tracker/../crew?tab=week')).toBe('/crew?tab=week');
+  });
+
+  it('rejects a path that normalizes to an auth page', () => {
+    expect(getSafeRedirectPath('/crew/../login')).toBeNull();
   });
 });
 

@@ -85,8 +85,12 @@ export async function requireRouteAccess(pathname: string): Promise<UserProfile>
 
   const profile = await getSessionProfile();
 
+  // the claim said "signed in" but the Auth server says no (revoked session or
+  // deleted user). /login would bounce straight back here, because the proxy
+  // still sees a valid JWT and treats /login as guest-only, so clear the stale
+  // cookies first
   if (!profile) {
-    redirect(buildLoginPath(pathname));
+    redirect(ROUTES.SIGN_OUT);
   }
 
   return profile;

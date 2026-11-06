@@ -45,21 +45,33 @@ export function buildLoginPath(nextPath: string): string {
   return safeNext ? `${ROUTES.LOGIN}?${NEXT_PARAM}=${encodeURIComponent(safeNext)}` : ROUTES.LOGIN;
 }
 
-// only same-origin app paths: rejects absolute URLs, protocol-relative (//host)
-// and backslash tricks (/\host) that browsers treat as another origin.
-// auth pages themselves are dropped so login can't send you back to login.
+// only same-origin app paths. the value is resolved with the URL parser first,
+// so what we check is what the browser and router.push will use: tabs and
+// newlines are dropped, //host and /\\host resolve to another origin and are
+// rejected. auth pages are dropped so login can't send you back to login.
 export function getSafeRedirectPath(value: string | null | undefined): string | null {
-  if (!value || !value.startsWith('/') || value.startsWith('//') || value.startsWith('/\\')) {
+  if (!value?.startsWith('/')) {
     return null;
   }
 
-  const pathname = value.split(/[?#]/)[0];
+  let url: URL;
 
-  if (pathname === '/' || matchesRouteList(pathname, PUBLIC_ROUTES_LIST)) {
+  try {
+    url = new URL(value, SAFE_REDIRECT_BASE);
+  } catch {
     return null;
   }
 
-  return value;
+  if (url.origin !== SAFE_REDIRECT_BASE) {
+    return null;
+  }
+
+  if (url.pathname === '/' || matchesRouteList(url.pathname, PUBLIC_ROUTES_LIST)) {
+    return null;
+  }
+
+  // the normalized form, never the raw input
+  return `${url.pathname}${url.search}${url.hash}`;
 }
 
 export function matchesRoute(pathname: string, route: string): boolean {
@@ -81,3 +93,6 @@ export type RouteAccess = 'allowed' | 'guest-only' | 'login' | 'denied';
 export interface RouteSession {
   role: UserRole | null;
 }
+
+// placeholder origin: only used to tell whether a path escapes to another host
+const SAFE_REDIRECT_BASE = 'http://app.internal';

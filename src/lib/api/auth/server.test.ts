@@ -145,11 +145,13 @@ describe('requireRouteAccess', () => {
     await expect(requireRouteAccess(ROUTES.TRACKER)).resolves.toMatchObject({ id: 'user-1' });
   });
 
-  it('redirects to login when the Auth server rejects the session', async () => {
+  // redirecting to /login here would loop: the proxy still trusts the JWT and
+  // bounces /login back to the app
+  it('resets the session when the Auth server rejects a still-valid JWT', async () => {
     signInAs('worker');
     getUser.mockResolvedValue({ data: { user: null }, error: new Error('session revoked') });
 
-    await expect(requireRouteAccess(ROUTES.DASHBOARD)).rejects.toThrow(`NEXT_REDIRECT:${ROUTES.LOGIN}?next=%2Fdashboard`);
+    await expect(requireRouteAccess(ROUTES.DASHBOARD)).rejects.toThrow(`NEXT_REDIRECT:${ROUTES.SIGN_OUT}`);
   });
 
   it('checks the role before loading the profile', async () => {
