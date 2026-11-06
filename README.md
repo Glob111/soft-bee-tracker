@@ -1,6 +1,6 @@
 # Soft Bee Tracker
 
-Production Next.js application for crew time tracking, project management, and reporting. Built with Supabase for auth and data, Zustand and TanStack Query for state management, and shadcn/ui for the interface.
+Production Next.js application for crew time tracking, project management, and reporting. Built with Supabase for auth and data, TanStack Query for server state, Zustand for UI state, and shadcn/ui for the interface.
 
 ## Tech stack
 
@@ -9,7 +9,7 @@ Production Next.js application for crew time tracking, project management, and r
 | Framework | [Next.js 16](https://nextjs.org/) (App Router), React 19, TypeScript |
 | Styling | Tailwind CSS v4, [shadcn/ui](https://ui.shadcn.com/) |
 | Database & auth | [Supabase](https://supabase.com/) (Postgres, RLS, SSR cookies) |
-| State management | [Zustand 5](https://zustand.docs.pmnd.rs/) typed stores, [TanStack Query](https://tanstack.com/query) |
+| State management | [TanStack Query](https://tanstack.com/query) (server data), [Zustand 5](https://zustand.docs.pmnd.rs/) (UI state) |
 | Auth flows | Supabase Auth, TanStack Query mutations in `lib/api/auth` |
 | Forms & validation | React Hook Form, Zod |
 | Notifications | [Sonner](https://sonner.emilkowal.ski/) |
@@ -17,7 +17,7 @@ Production Next.js application for crew time tracking, project management, and r
 ## Prerequisites
 
 - Node.js 20+
-- Yarn 4 (via `corepack enable`)
+- Yarn 4 (`corepack enable`; version pinned in `package.json`)
 - [Supabase CLI](https://supabase.com/docs/guides/cli) and Docker (for local DB and type generation)
 
 ## Getting started
@@ -37,6 +37,8 @@ cp .example.env .env.local
 yarn dev
 ```
 
+Restart `yarn dev` after editing `.env.local`: env files are read at startup.
+
 Open [http://localhost:3000](http://localhost:3000) and sign in with one of the [test accounts](#test-accounts).
 
 ### Environments
@@ -51,9 +53,9 @@ Local/test and production settings never share a file.
 
 | Variable | Description |
 |----------|-------------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL (public) |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase API URL, exactly `https://<project-ref>.supabase.co` (local: `http://127.0.0.1:54321`) |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Publishable / anon key (browser + server client) |
-| `SUPABASE_SECRET_KEY` | Secret / service role key — **server-only**, bypasses RLS, never `NEXT_PUBLIC_` |
+| `SUPABASE_SECRET_KEY` | Secret / service role key — **server-only**, bypasses RLS, read only by `createServiceClient()` in `src/lib/supabase/server.ts`; never `NEXT_PUBLIC_` |
 
 All `.env` and `.env.*` files are gitignored; only the `.example.env` template (no secrets) is committed.
 
@@ -95,7 +97,7 @@ src/
 ├── constants/            # Route lists and shared constants
 ├── features/             # Feature UI modules
 ├── lib/
-│   ├── api/              # Domain data access and Zustand stores
+│   ├── api/              # Domain data access (TanStack Query hooks)
 │   └── utils.ts          # Shared helpers (cn, etc.)
 ├── providers/            # React context providers (QueryClient)
 └── types/                # Shared TypeScript types (Database, ApiError)
@@ -120,7 +122,6 @@ src/lib/api/users/
   index.ts       # Public barrel — components import from here only
   queries.ts     # Read helpers
   mutations.ts   # Write helpers
-  store.ts       # Optional typed Zustand state and async actions
   types.ts       # Optional aliases and Pick/Omit of generated database types
   mappers.ts     # Only when a value changes at runtime
 ```
@@ -131,10 +132,11 @@ Components import hooks from `@/lib/api/<feature>`. They must not call Supabase,
 
 | Concern | Where |
 |---------|-------|
-| Project and project-rate async state | Zustand stores in `lib/api/<feature>/store.ts` |
-| Cached server data | TanStack Query hooks in `lib/api/**` |
+| Server data and CRUD | TanStack Query hooks in `lib/api/**` |
 | Ephemeral UI state | Zustand stores in `features/<name>/store/` |
 | Auth mutations | `useSignIn`, `useSignUp`, `useSignOut` in `lib/api/auth` |
+
+Do not use Zustand for CRUD. Existing Zustand stores under `src/lib/api/**` (`projects`, `project-rates`, `auth` profile) predate this decision: do not add new domain stores or extend them.
 
 See `.cursor/rules/state-manager.mdc` for full patterns.
 
@@ -192,16 +194,38 @@ Migrations use 14-digit UTC timestamps: `YYYYMMDDHHmmss_description.sql`. All ta
 - **DB deploy** (`.github/workflows/deploy-db.yml`) — manually triggered, validated, approval-gated `supabase db push` to production from `main`
 - Path alias: `@/*` → `src/*`
 
-## Agent / contributor docs
+## AI agent setup
+
+Each team member configures their own AI tool. Every tool reads the same project rules (structure, commands, style, data access, and secrets) from its own instruction file:
+
+| Tool | Instruction files |
+|------|-------------------|
+| Claude Code | `CLAUDE.md` |
+| Codex and other `AGENTS.md`-aware agents | `AGENTS.md`, `CODEX.md` |
+| Cursor | `.cursor/rules/*.mdc` |
+| Windsurf | `.windsurfrules` |
+
+Detailed Cursor rules, referenced by the other files:
 
 | File | Purpose |
 |------|---------|
 | `.cursor/rules/ai-standing-orders.mdc` | Global coding standards |
 | `.cursor/rules/state-manager.mdc` | TanStack Query + Zustand patterns |
 | `.cursor/rules/lib-services.mdc` | `lib/api` module layout |
+| `.cursor/rules/components-ui.mdc` | Component and UI conventions |
+| `.cursor/rules/app-nextjs.mdc` | App Router page conventions |
+| `.cursor/rules/supabase-db.mdc` | Migrations, RLS, and Postgres functions |
 | `.cursor/rules/naming-conventions.mdc` | File and folder naming (`kebab-case`) |
-| `CLAUDE.md` | Claude-specific standing orders |
 | `epics/` | Feature epics (auth, tracker, workspace layout) |
+
+When you change a shared rule, update every instruction file that states it so the tools stay in agreement.
+
+### Verify your setup
+
+1. `yarn install && yarn test` passes.
+2. `yarn dev` starts and `/login` loads without a Supabase env error.
+3. `git status` does not list `.env`.
+4. Ask your agent: *"What are this repo's rules for data access and secrets?"* The answer should mention importing from `@/lib/api/<entity>` only, no direct Supabase or `fetch` calls in UI, and that `SUPABASE_SECRET_KEY` is server-only.
 
 ## Planned routes
 
