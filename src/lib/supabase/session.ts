@@ -44,6 +44,8 @@ export async function updateSession(request: NextRequest) {
     }
   });
 
+  // IMPORTANT: If you remove getClaims() and you use server-side rendering
+  // with the Supabase client, your users may be randomly logged out.
   // getClaims verifies the JWT (and refreshes it through setAll above), so the
   // role read here is the same claims.user_role that RLS checks.
   const { data, error } = await supabase.auth.getClaims();

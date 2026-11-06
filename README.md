@@ -1,6 +1,6 @@
 # Soft Bee Tracker
 
-Production Next.js application for crew time tracking, project management, and reporting. Built with Supabase for auth and data, Zustand and TanStack Query for state management, and shadcn/ui for the interface.
+Production Next.js application for crew time tracking, project management, and reporting. Built with Supabase for auth and data, TanStack Query for server state, Zustand for UI state, and shadcn/ui for the interface.
 
 ## Tech stack
 
@@ -9,7 +9,7 @@ Production Next.js application for crew time tracking, project management, and r
 | Framework | [Next.js 16](https://nextjs.org/) (App Router), React 19, TypeScript |
 | Styling | Tailwind CSS v4, [shadcn/ui](https://ui.shadcn.com/) |
 | Database & auth | [Supabase](https://supabase.com/) (Postgres, RLS, SSR cookies) |
-| State management | [Zustand 5](https://zustand.docs.pmnd.rs/) typed stores, [TanStack Query](https://tanstack.com/query) |
+| State management | [TanStack Query](https://tanstack.com/query) (server data), [Zustand 5](https://zustand.docs.pmnd.rs/) (UI state) |
 | Auth flows | Supabase Auth, TanStack Query mutations in `lib/api/auth` |
 | Forms & validation | React Hook Form, Zod |
 | Notifications | [Sonner](https://sonner.emilkowal.ski/) |
@@ -17,7 +17,7 @@ Production Next.js application for crew time tracking, project management, and r
 ## Prerequisites
 
 - Node.js 20+
-- Yarn 4 (via `corepack enable`)
+- Yarn 4 (`corepack enable`; version pinned in `package.json`)
 - [Supabase CLI](https://supabase.com/docs/guides/cli) and Docker (for local DB and type generation)
 
 ## Getting started
@@ -37,6 +37,8 @@ cp .example.env .env.local
 yarn dev
 ```
 
+Restart `yarn dev` after editing `.env.local`: env files are read at startup.
+
 Open [http://localhost:3000](http://localhost:3000) and sign in with one of the [test accounts](#test-accounts).
 
 ### Environments
@@ -51,9 +53,9 @@ Local/test and production settings never share a file.
 
 | Variable | Description |
 |----------|-------------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL (public) |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase API URL, exactly `https://<project-ref>.supabase.co` (local: `http://127.0.0.1:54321`) |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Publishable / anon key (browser + server client) |
-| `SUPABASE_SECRET_KEY` | Secret / service role key — **server-only**, bypasses RLS, never `NEXT_PUBLIC_` |
+| `SUPABASE_SECRET_KEY` | Secret / service role key — **server-only**, bypasses RLS, read only by `createServiceClient()` in `src/lib/supabase/server.ts`; never `NEXT_PUBLIC_` |
 
 All `.env` and `.env.*` files are gitignored; only the `.example.env` template (no secrets) is committed.
 
@@ -95,7 +97,7 @@ src/
 ├── constants/            # Routes, route-access rules, shared constants
 ├── features/             # Feature UI modules
 ├── lib/
-│   ├── api/              # Domain data access and Zustand stores
+│   ├── api/              # Domain data access (TanStack Query hooks)
 │   ├── route-access.ts   # Route guard decisions (public, login, role)
 │   └── utils.ts          # Shared helpers (cn, etc.)
 ├── providers/            # React context providers (QueryClient)
@@ -121,12 +123,11 @@ src/lib/api/users/
   index.ts       # Public barrel — components import from here only
   queries.ts     # Read helpers
   mutations.ts   # Write helpers
-  store.ts       # Optional typed Zustand state and async actions
-  types.ts       # Optional request/response interfaces
-  mappers.ts     # Optional DB row ↔ domain mapping
+  types.ts       # Optional aliases and Pick/Omit of generated database types
+  mappers.ts     # Only when a value changes at runtime
 ```
 
-Components import hooks from `@/lib/api/<feature>`. They must not call Supabase, `fetch`, or Axios directly.
+Components import hooks from `@/lib/api/<feature>`. They must not call Supabase, `fetch`, or Axios directly. Domain types alias generated database types. A mapper exists only when a value changes at runtime. See `.cursor/rules/lib-services.mdc`.
 
 ### Route protection
 
@@ -154,10 +155,11 @@ The access rules live in `src/constants/index.ts`: `PUBLIC_ROUTES_LIST`, `GUEST_
 
 | Concern | Where |
 |---------|-------|
-| Project and project-rate async state | Zustand stores in `lib/api/<feature>/store.ts` |
-| Cached server data | TanStack Query hooks in `lib/api/**` |
+| Server data and CRUD | TanStack Query hooks in `lib/api/**` |
 | Ephemeral UI state | Zustand stores in `features/<name>/store/` |
 | Auth mutations | `useSignIn`, `useSignUp`, `useSignOut` in `lib/api/auth` |
+
+Do not use Zustand for CRUD. Existing Zustand stores under `src/lib/api/**` (`projects`, `project-rates`, `auth` profile) predate this decision: do not add new domain stores or extend them.
 
 See `.cursor/rules/state-manager.mdc` for full patterns.
 
@@ -176,13 +178,19 @@ yarn sb:start
 # Apply migrations + seeds to the local DB (drops local data)
 yarn sb:reset
 
+# Apply migrations to the local database
+supabase db push
+
+# Apply migrations to the linked hosted project (asks for confirmation)
+supabase db push --remote
+
 # Regenerate TypeScript types after schema changes
 yarn sb:db:types
 ```
 
 ### Production migrations
 
-> **Warning:** `supabase db push` targets the **linked remote project**, not your local DB. Never use it for local development.
+> **Warning:** `supabase db push` targets the **local** database. The linked hosted project needs `supabase db push --remote`, and the CLI asks for confirmation.
 
 Production migrations are deployed **manually only**: after the migrations are merged to `main`, the person responsible for the release opens **Actions → Deploy database migrations → Run workflow** with the `main` branch selected (other branches are skipped). Nothing deploys automatically on merge.
 
@@ -195,8 +203,8 @@ Manual fallback, by the person responsible for the release:
 
 ```bash
 supabase link --project-ref <production-project-ref>
-supabase db push --dry-run   # review pending migrations
-supabase db push             # applies migrations only; seeds are not applied
+supabase db push --remote --dry-run   # review pending migrations
+supabase db push --remote             # applies migrations only; asks for confirmation. Seeds are not applied
 ```
 
 Migrations use 14-digit UTC timestamps: `YYYYMMDDHHmmss_description.sql`. All tables must have RLS enabled. See `.cursor/rules/supabase-db.mdc` for policy conventions.
@@ -209,16 +217,38 @@ Migrations use 14-digit UTC timestamps: `YYYYMMDDHHmmss_description.sql`. All ta
 - **DB deploy** (`.github/workflows/deploy-db.yml`) — manually triggered, validated, approval-gated `supabase db push` to production from `main`
 - Path alias: `@/*` → `src/*`
 
-## Agent / contributor docs
+## AI agent setup
+
+Each team member configures their own AI tool. Every tool reads the same project rules (structure, commands, style, data access, and secrets) from its own instruction file:
+
+| Tool | Instruction files |
+|------|-------------------|
+| Claude Code | `CLAUDE.md` |
+| Codex and other `AGENTS.md`-aware agents | `AGENTS.md`, `CODEX.md` |
+| Cursor | `.cursor/rules/*.mdc` |
+| Windsurf | `.windsurfrules` |
+
+Detailed Cursor rules, referenced by the other files:
 
 | File | Purpose |
 |------|---------|
 | `.cursor/rules/ai-standing-orders.mdc` | Global coding standards |
 | `.cursor/rules/state-manager.mdc` | TanStack Query + Zustand patterns |
 | `.cursor/rules/lib-services.mdc` | `lib/api` module layout |
+| `.cursor/rules/components-ui.mdc` | Component and UI conventions |
+| `.cursor/rules/app-nextjs.mdc` | App Router page conventions |
+| `.cursor/rules/supabase-db.mdc` | Migrations, RLS, and Postgres functions |
 | `.cursor/rules/naming-conventions.mdc` | File and folder naming (`kebab-case`) |
-| `CLAUDE.md` | Claude-specific standing orders |
 | `epics/` | Feature epics (auth, tracker, workspace layout) |
+
+When you change a shared rule, update every instruction file that states it so the tools stay in agreement.
+
+### Verify your setup
+
+1. `yarn install && yarn test` passes.
+2. `yarn dev` starts and `/login` loads without a Supabase env error.
+3. `git status` does not list `.env`.
+4. Ask your agent: *"What are this repo's rules for data access and secrets?"* The answer should mention importing from `@/lib/api/<entity>` only, no direct Supabase or `fetch` calls in UI, and that `SUPABASE_SECRET_KEY` is server-only.
 
 ## Routes and access
 
@@ -236,3 +266,57 @@ Migrations use 14-digit UTC timestamps: `YYYYMMDDHHmmss_description.sql`. All ta
 | `/users` | User administration | Admin |
 
 Any route not listed needs a session; there is no public-by-default route.
+
+## AI change workflow
+
+How we make a change with an AI agent (Claude Code, Codex, Cursor, Windsurf). The agent does the typing; you own the result. Every step ends with a check you do yourself.
+
+Agent rules live in `CLAUDE.md`, `AGENTS.md`, `CODEX.md`, `.windsurfrules`, and `.cursor/rules/*.mdc`.
+
+### The cycle
+
+#### 1. Plan
+
+Ask the agent to read the relevant code and propose the change **before** it edits anything.
+
+- Give it the goal and the Jira key, e.g. "SBT-43: fix the `set-state-in-effect` lint error in `use-mobile.ts`".
+- Check: the plan names the files it will touch and who uses them, keeps the change small, and adds no new dependencies or schema/auth changes without asking.
+
+#### 2. Code
+
+Let the agent make the change on its own branch from `dev` (e.g. `fix/sbt-43-...`).
+
+- Check: no secrets in code, no direct Supabase or `fetch` calls in UI, and file names in kebab-case. See the agent rules.
+
+#### 3. Review the diff
+
+Read every line of `git diff` before you run anything.
+
+- Does the diff do only what the plan said?
+- Is the old behavior kept, unless the plan changed it on purpose?
+- Are new tests testing real behavior, not just mocks?
+- Do the agent's checks pass: `npx eslint <changed files>`, `npx tsc --noEmit`, and `yarn test`?
+
+#### 4. Run
+
+Check it in the real app, not just in tests.
+
+- `yarn build` passes.
+- `yarn dev`, then use the feature the way a user would. Unit tests can't show you this.
+- Check the `yarn dev` terminal and the browser console for new errors.
+
+#### 5. Review
+
+Open a PR into `dev` that links the Jira ticket, describes the change, and gives "How to verify" steps. A teammate reviews it. Then move the ticket to **To Review** and add a comment with the PR link.
+
+### Worked example: SBT-43
+
+**Change:** `src/hooks/use-mobile.ts` called `setState` directly inside `useEffect`, which the `react-hooks/set-state-in-effect` lint rule flags.
+
+| Step | What happened |
+|------|---------------|
+| Plan | The agent found the only consumer (`components/ui/sidebar.tsx`) and proposed `useSyncExternalStore` with `matchMedia`, with no new dependencies. The server snapshot returns `false` to keep the old desktop-first render. |
+| Code | It rewrote the hook as `subscribe` / `getSnapshot` / `getServerSnapshot` helpers and added `use-mobile.test.ts` (node environment, stubbed `window.matchMedia`). |
+| Review the diff | We confirmed `matches` on `(max-width: 767px)` equals the old `innerWidth < 768`, and that cleanup removes the same listener. ESLint, `tsc`, and tests (34) pass. |
+| Run | `yarn build` passes. A developer checked it manually: signed in, opened `/dashboard`, and resized the browser across 768px. The sidebar switches between the mobile sheet and the desktop rail, with no new errors in the console or the `yarn dev` terminal. |
+| Review | The PR goes into `dev` and links SBT-43. |
