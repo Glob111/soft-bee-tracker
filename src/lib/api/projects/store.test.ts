@@ -77,6 +77,84 @@ describe('projects store', () => {
     expect(store.getState().isLoading).toBe(false);
   });
 
+  it('replaces a project in both collections and leaves other projects untouched', () => {
+    const otherProject: Project = { ...existingProject, id: 'project-2', name: 'Other project' };
+    const archivedProject: Project = { ...existingProject, status: 'archived' };
+    const store = createProjectsStore(createRepository());
+    store.setState({ projects: [existingProject, otherProject], userProjects: [existingProject, otherProject] });
+
+    store.getState().replaceUserProject(archivedProject);
+
+    expect(store.getState().userProjects).toEqual([archivedProject, otherProject]);
+    expect(store.getState().projects).toEqual([archivedProject, otherProject]);
+  });
+
+  it('does not add a project that is not in the collections', () => {
+    const store = createProjectsStore(createRepository());
+
+    store.getState().replaceUserProject(existingProject);
+
+    expect(store.getState()).toMatchObject({ projects: [], userProjects: [] });
+  });
+
+  it('keeps a replaced project when an older user-project load finishes', async () => {
+    const archivedProject: Project = { ...existingProject, status: 'archived' };
+    const loadRequest = createDeferred<Project[]>();
+    const store = createProjectsStore(createRepository({ getUserProjects: vi.fn().mockReturnValue(loadRequest.promise) }));
+    store.setState({ userProjects: [existingProject] });
+
+    const loadPromise = store.getState().getUserProjects();
+    store.getState().replaceUserProject(archivedProject);
+    loadRequest.resolve([existingProject]);
+    await loadPromise;
+
+    expect(store.getState().userProjects).toEqual([archivedProject]);
+  });
+
+  it('keeps a replaced project when an older all-projects load finishes', async () => {
+    const otherProject: Project = { ...existingProject, id: 'project-2', name: 'Other project' };
+    const archivedProject: Project = { ...existingProject, status: 'archived' };
+    const loadRequest = createDeferred<Project[]>();
+    const store = createProjectsStore(createRepository({ getProjects: vi.fn().mockReturnValue(loadRequest.promise) }));
+    store.setState({ projects: [existingProject] });
+
+    const loadPromise = store.getState().getProjects();
+    store.getState().replaceUserProject(archivedProject);
+    loadRequest.resolve([existingProject, otherProject]);
+    await loadPromise;
+
+    expect(store.getState().projects).toEqual([archivedProject, otherProject]);
+  });
+
+  it('trusts a load that started after the replacement', async () => {
+    const archivedProject: Project = { ...existingProject, status: 'archived' };
+    const restoredOnServer: Project = { ...existingProject, status: 'active', updatedAt: '2026-08-14T10:00:00.000Z' };
+    const getProjects = vi.fn().mockResolvedValue([restoredOnServer]);
+    const store = createProjectsStore(createRepository({ getProjects }));
+    store.setState({ projects: [existingProject] });
+
+    store.getState().replaceUserProject(archivedProject);
+    await store.getState().getProjects();
+
+    expect(store.getState().projects).toEqual([restoredOnServer]);
+  });
+
+  it('forgets pending replacements on reset', async () => {
+    const archivedProject: Project = { ...existingProject, status: 'archived' };
+    const loadRequest = createDeferred<Project[]>();
+    const getProjects = vi.fn().mockReturnValueOnce(loadRequest.promise).mockResolvedValueOnce([existingProject]);
+    const store = createProjectsStore(createRepository({ getProjects }));
+
+    const staleLoad = store.getState().getProjects();
+    store.getState().replaceUserProject(archivedProject);
+    store.getState().reset();
+    loadRequest.resolve([existingProject]);
+    await staleLoad;
+    await store.getState().getProjects();
+
+    expect(store.getState().projects).toEqual([existingProject]);
+  });
+
   it('stores a normalized load error without clearing projects', async () => {
     const store = createProjectsStore(
       createRepository({

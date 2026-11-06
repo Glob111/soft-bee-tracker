@@ -40,6 +40,18 @@ export function createProjectsStore(repository: ProjectsRepository) {
     let latestProjectsLoadId = 0;
     let latestUserProjectsLoadId = 0;
     let userProjectsRevision = 0;
+    let projectsRevision = 0;
+    const replacedProjects = new Map<string, ReplacedProject>();
+
+    function applyReplacedProjects(loadedProjects: Project[], revisionAtStart: number): Project[] {
+      for (const [projectId, replaced] of replacedProjects) {
+        if (replaced.revision <= revisionAtStart) {
+          replacedProjects.delete(projectId);
+        }
+      }
+
+      return loadedProjects.map((project) => replacedProjects.get(project.id)?.project ?? project);
+    }
 
     function startRequest(): number {
       pendingRequests += 1;
@@ -60,14 +72,17 @@ export function createProjectsStore(repository: ProjectsRepository) {
         latestProjectsLoadId += 1;
         latestUserProjectsLoadId += 1;
         userProjectsRevision += 1;
+        projectsRevision += 1;
+        replacedProjects.clear();
         set(initialState);
       },
       getProjects: async () => {
         const actionId = startRequest();
         const loadId = ++latestProjectsLoadId;
+        const revisionAtStart = projectsRevision;
 
         try {
-          const projects = await repository.getProjects();
+          const projects = applyReplacedProjects(await repository.getProjects(), revisionAtStart);
           finishRequest();
           set({
             ...(loadId === latestProjectsLoadId ? { projects } : {}),
@@ -117,6 +132,8 @@ export function createProjectsStore(repository: ProjectsRepository) {
       },
       replaceUserProject: (project) => {
         userProjectsRevision += 1;
+        projectsRevision += 1;
+        replacedProjects.set(project.id, { project, revision: projectsRevision });
         set((state) => ({
           userProjects: state.userProjects.map((current) => (current.id === project.id ? project : current)),
           projects: state.projects.map((current) => (current.id === project.id ? project : current))
@@ -132,3 +149,8 @@ export const useProjectsStore = createProjectsStore({
 });
 
 registerStoreReset(() => useProjectsStore.getState().reset());
+
+interface ReplacedProject {
+  project: Project;
+  revision: number;
+}

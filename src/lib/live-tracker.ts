@@ -21,6 +21,22 @@ export function getLiveElapsedMinutes(tracker: Pick<Tracker, 'liveDurationMinute
   return Math.round(getLiveElapsedSeconds(tracker, now) / 60);
 }
 
+export function getLiveWholeMinutes(tracker: Pick<Tracker, 'liveDurationMinutes' | 'liveStatus' | 'startLiveDate'>, now: Date): number {
+  return Math.floor(getLiveElapsedSeconds(tracker, now) / 60);
+}
+
+export function getMsUntilNextLiveMinute(startLiveDate: string, now: Date): number {
+  const elapsedMs = now.getTime() - new Date(startLiveDate).getTime();
+
+  if (elapsedMs < 0) {
+    return -elapsedMs + MINUTE_MS;
+  }
+
+  return MINUTE_MS - (elapsedMs % MINUTE_MS);
+}
+
+const MINUTE_MS = 60_000;
+
 export function formatStopwatch(totalSeconds: number): string {
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);

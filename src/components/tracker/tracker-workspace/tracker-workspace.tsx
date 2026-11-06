@@ -6,7 +6,7 @@ import { useState, useSyncExternalStore } from 'react';
 import { DayEntries } from '@components/tracker/day-entries/day-entries';
 import { TrackerCalendar, TrackerCalendarSkeleton } from '@components/tracker/tracker-calendar/tracker-calendar';
 import { Skeleton } from '@ui/skeleton';
-import { useNow } from '@/hooks/use-now';
+import { useLiveMinuteNow } from '@/hooks/use-live-minute-now';
 import { useTrackers } from '@/lib/api/trackers';
 import { isLiveTrackerActive } from '@/lib/live-tracker';
 import { sumMinutesByDate, toDateKey } from '@/lib/tracker-days';
@@ -30,8 +30,9 @@ function TrackerWorkspaceContent() {
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(new Date()));
   const { data: trackers = [], isLoading, error, refetch } = useTrackers();
-  const hasRunningTimer = trackers.some((tracker) => isLiveTrackerActive(tracker) && tracker.liveStatus === 'start');
-  const now = useNow(hasRunningTimer, 30_000);
+  const runningStartDate =
+    trackers.find((tracker) => isLiveTrackerActive(tracker) && tracker.liveStatus === 'start')?.startLiveDate ?? null;
+  const now = useLiveMinuteNow(runningStartDate);
   const minutesByDate = sumMinutesByDate(trackers, now);
 
   function handleSelectDate(date: Date) {

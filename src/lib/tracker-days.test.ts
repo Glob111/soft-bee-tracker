@@ -41,6 +41,30 @@ describe('sumMinutesByDate', () => {
     expect(totals.get('2026-11-04')).toBe(45);
   });
 
+  it('combines saved, paused, running and rejected entries on the same day', () => {
+    const totals = sumMinutesByDate(
+      [
+        buildTracker({ durationMinutes: 60, status: 'approved' }),
+        buildTracker({ durationMinutes: 120, status: 'rejected' }),
+        buildTracker({ isLive: true, liveStatus: 'pause', liveDurationMinutes: 15, startLiveDate: null }),
+        buildTracker({ isLive: true, liveStatus: 'start', liveDurationMinutes: 0, startLiveDate: '2026-11-05T11:52:01.000Z' }),
+        buildTracker({ isLive: true, liveStatus: 'start', status: 'rejected', startLiveDate: '2026-11-05T11:00:00.000Z' })
+      ],
+      NOW
+    );
+
+    expect(totals.get('2026-11-05')).toBe(60 + 15 + 7);
+  });
+
+  it('uses the saved duration for a finished live entry', () => {
+    const totals = sumMinutesByDate(
+      [buildTracker({ isLive: true, liveStatus: 'finish', durationMinutes: 45, liveDurationMinutes: 50, startLiveDate: null })],
+      NOW
+    );
+
+    expect(totals.get('2026-11-05')).toBe(45);
+  });
+
   it('skips rejected entries', () => {
     const totals = sumMinutesByDate([buildTracker({ durationMinutes: 60, status: 'rejected' })], NOW);
 

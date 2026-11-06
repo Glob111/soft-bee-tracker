@@ -24,6 +24,11 @@ describe('parseHoursMinutes', () => {
     expect(parseHoursMinutes('01:60')).toBeNaN();
     expect(parseHoursMinutes('00:00')).toBeNaN();
     expect(parseHoursMinutes('24:30')).toBeNaN();
+    expect(parseHoursMinutes('24:01')).toBeNaN();
+    expect(parseHoursMinutes('1:60')).toBeNaN();
+    expect(parseHoursMinutes('0:00')).toBeNaN();
+    expect(parseHoursMinutes('123')).toBeNaN();
+    expect(parseHoursMinutes('-1')).toBeNaN();
     expect(parseHoursMinutes('1.5')).toBeNaN();
   });
 });

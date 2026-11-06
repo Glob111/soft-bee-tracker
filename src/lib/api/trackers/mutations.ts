@@ -20,12 +20,12 @@ import type {
   Tracker,
   UpdateTrackerInput
 } from '@/lib/api/trackers/types';
-import { getLiveElapsedMinutes } from '@/lib/live-tracker';
+import { getLiveElapsedMinutes, getLiveWholeMinutes } from '@/lib/live-tracker';
 import { createBrowserClient } from '@/lib/supabase/client';
 import type { ApiError } from '@/types/api-error';
 import content from './content.json';
 
-interface UseCreateTrackerOptions {
+interface UseTrackerMutationOptions {
   onSuccess?: (tracker: Tracker) => void;
 }
 
@@ -47,7 +47,7 @@ export async function createTracker(input: CreateTrackerInput): Promise<Tracker>
   return mapTrackerRowToTracker(data);
 }
 
-export function useCreateTracker(options?: UseCreateTrackerOptions) {
+export function useCreateTracker(options?: UseTrackerMutationOptions) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -85,7 +85,7 @@ export async function startLiveTracker(input: StartLiveTrackerInput): Promise<Tr
 export function pauseLiveTracker(tracker: Tracker): Promise<Tracker> {
   return updateLiveTracker(tracker.id, {
     live_status: 'pause',
-    live_duration_minutes: getLiveElapsedMinutes(tracker, new Date()),
+    live_duration_minutes: getLiveWholeMinutes(tracker, new Date()),
     start_live_date: null
   });
 }
@@ -192,7 +192,7 @@ async function updateLiveTracker(trackerId: string, changes: UpdateTrackerRow): 
   return mapTrackerRowToTracker(data);
 }
 
-export function useStartLiveTracker(options?: UseCreateTrackerOptions) {
+export function useStartLiveTracker(options?: UseTrackerMutationOptions) {
   return useTrackerMutation(startLiveTracker, content.timerStarted, options);
 }
 
@@ -204,7 +204,7 @@ export function useResumeLiveTracker() {
   return useTrackerMutation(resumeLiveTracker, content.timerResumed);
 }
 
-export function useFinishLiveTracker(options?: UseCreateTrackerOptions) {
+export function useFinishLiveTracker(options?: UseTrackerMutationOptions) {
   return useTrackerMutation(finishLiveTracker, content.entrySaved, options);
 }
 
@@ -212,11 +212,11 @@ export function useRestartLiveTracker() {
   return useTrackerMutation(restartLiveTracker, content.timerResumed);
 }
 
-export function useUpdateTracker(options?: UseCreateTrackerOptions) {
+export function useUpdateTracker(options?: UseTrackerMutationOptions) {
   return useTrackerMutation(updateTracker, content.entryUpdated, options);
 }
 
-export function useDeleteTracker(options?: UseCreateTrackerOptions) {
+export function useDeleteTracker(options?: UseTrackerMutationOptions) {
   return useTrackerMutation(deleteTracker, content.entryDeleted, options);
 }
 
@@ -227,7 +227,7 @@ export function useDiscardLiveTracker() {
 function useTrackerMutation<TInput>(
   mutationFn: (input: TInput) => Promise<Tracker>,
   successMessage: string,
-  options?: UseCreateTrackerOptions
+  options?: UseTrackerMutationOptions
 ) {
   const queryClient = useQueryClient();
 

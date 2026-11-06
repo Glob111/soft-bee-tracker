@@ -6,6 +6,8 @@ import {
   formatTimerLabel,
   getLiveElapsedMinutes,
   getLiveElapsedSeconds,
+  getLiveWholeMinutes,
+  getMsUntilNextLiveMinute,
   isLiveTrackerActive
 } from '@/lib/live-tracker';
 
@@ -36,6 +38,41 @@ describe('getLiveElapsedMinutes', () => {
     const tracker = { liveDurationMinutes: 0, liveStatus: 'start' as const, startLiveDate: '2026-11-05T11:58:30.000Z' };
 
     expect(getLiveElapsedMinutes(tracker, NOW)).toBe(2);
+  });
+});
+
+describe('getLiveWholeMinutes', () => {
+  it('floors the elapsed time so a pause never credits untracked seconds', () => {
+    const tracker = { liveDurationMinutes: 0, liveStatus: 'start' as const, startLiveDate: '2026-11-05T11:58:30.000Z' };
+
+    expect(getLiveWholeMinutes(tracker, NOW)).toBe(1);
+  });
+
+  it('adds nothing for a run shorter than a minute', () => {
+    const tracker = { liveDurationMinutes: 3, liveStatus: 'start' as const, startLiveDate: '2026-11-05T11:59:31.000Z' };
+
+    expect(getLiveWholeMinutes(tracker, NOW)).toBe(3);
+  });
+
+  it('keeps banked minutes unchanged while paused', () => {
+    const tracker = { liveDurationMinutes: 25, liveStatus: 'pause' as const, startLiveDate: null };
+
+    expect(getLiveWholeMinutes(tracker, NOW)).toBe(25);
+  });
+});
+
+describe('getMsUntilNextLiveMinute', () => {
+  it('counts down to the next whole minute measured from the timer start', () => {
+    expect(getMsUntilNextLiveMinute('2026-11-05T11:58:30.000Z', NOW)).toBe(30_000);
+    expect(getMsUntilNextLiveMinute('2026-11-05T11:59:59.250Z', NOW)).toBe(59_250);
+  });
+
+  it('waits a full minute when the timer sits exactly on a boundary', () => {
+    expect(getMsUntilNextLiveMinute('2026-11-05T11:58:00.000Z', NOW)).toBe(60_000);
+  });
+
+  it('waits for the first minute after a start date in the future', () => {
+    expect(getMsUntilNextLiveMinute('2026-11-05T12:00:10.000Z', NOW)).toBe(70_000);
   });
 });
 

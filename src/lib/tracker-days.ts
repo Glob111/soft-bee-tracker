@@ -1,7 +1,7 @@
 import { eachDayOfInterval, endOfWeek, format, startOfWeek } from 'date-fns';
 
 import type { Tracker } from '@/lib/api/trackers/types';
-import { getLiveElapsedMinutes, isLiveTrackerActive } from '@/lib/live-tracker';
+import { getLiveWholeMinutes, isLiveTrackerActive } from '@/lib/live-tracker';
 
 export const DATE_KEY_FORMAT = 'yyyy-MM-dd';
 
@@ -10,7 +10,7 @@ export function toDateKey(date: Date): string {
 }
 
 export function getTrackerMinutes(tracker: Tracker, now: Date): number {
-  return isLiveTrackerActive(tracker) ? getLiveElapsedMinutes(tracker, now) : tracker.durationMinutes;
+  return isLiveTrackerActive(tracker) ? getLiveWholeMinutes(tracker, now) : tracker.durationMinutes;
 }
 
 export function sumMinutesByDate(trackers: Tracker[], now: Date): Map<string, number> {
