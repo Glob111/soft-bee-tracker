@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getIsMobileServerSnapshot, getIsMobileSnapshot, subscribeToMobileQuery } from './use-mobile';
+type UseMobileModule = typeof import('./use-mobile');
 
 interface FakeMediaQueryList {
   matches: boolean;
@@ -12,8 +12,11 @@ interface FakeMediaQueryList {
 describe('use-mobile store helpers', () => {
   let mediaQueryList: FakeMediaQueryList;
   let matchMedia: ReturnType<typeof vi.fn>;
+  let getIsMobileServerSnapshot: UseMobileModule['getIsMobileServerSnapshot'];
+  let getIsMobileSnapshot: UseMobileModule['getIsMobileSnapshot'];
+  let subscribeToMobileQuery: UseMobileModule['subscribeToMobileQuery'];
 
-  beforeEach(() => {
+  beforeEach(async () => {
     mediaQueryList = {
       matches: false,
       media: '',
@@ -25,6 +28,10 @@ describe('use-mobile store helpers', () => {
       return mediaQueryList;
     });
     vi.stubGlobal('window', { matchMedia });
+
+    // fresh module per test: the shared MediaQueryList is cached at module level
+    vi.resetModules();
+    ({ getIsMobileServerSnapshot, getIsMobileSnapshot, subscribeToMobileQuery } = await import('./use-mobile'));
   });
 
   afterEach(() => {
@@ -55,6 +62,20 @@ describe('use-mobile store helpers', () => {
     unsubscribe();
 
     expect(mediaQueryList.removeEventListener).toHaveBeenCalledWith('change', onStoreChange);
+  });
+
+  it('shares one MediaQueryList between subscribe and snapshot reads', () => {
+    const unsubscribe = subscribeToMobileQuery(vi.fn());
+    getIsMobileSnapshot();
+    getIsMobileSnapshot();
+    unsubscribe();
+    subscribeToMobileQuery(vi.fn());
+
+    expect(matchMedia).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not touch window until first used', () => {
+    expect(matchMedia).not.toHaveBeenCalled();
   });
 
   it('renders desktop on the server', () => {
