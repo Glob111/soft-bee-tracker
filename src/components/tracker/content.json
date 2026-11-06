@@ -1,0 +1,123 @@
+{
+  "fallbackProjectName": "Project",
+  "form": {
+    "projectLabel": "Project",
+    "dateLabel": "Date",
+    "durationLabel": "Duration, HH:mm",
+    "descriptionLabel": "Description (optional)",
+    "descriptionPlaceholder": "What did you work on?"
+  },
+  "projectSelect": {
+    "loading": "Loading projects…",
+    "empty": "No projects available",
+    "placeholder": "Select a project"
+  },
+  "createDialog": {
+    "triggerButton": "New tracker",
+    "compactTrigger": "Add entry",
+    "title": "Create tracker",
+    "description": "Add a manual time entry for one of your projects.",
+    "cancelButton": "Cancel",
+    "submitButton": "Create tracker",
+    "submittingButton": "Creating…"
+  },
+  "editDialog": {
+    "title": "Edit entry",
+    "description": "Entries can be changed until they are approved.",
+    "cancelButton": "Cancel",
+    "submitButton": "Save changes",
+    "submittingButton": "Saving…"
+  },
+  "startDialog": {
+    "triggerButton": "Start timer",
+    "title": "New live time entry",
+    "description": "The timer runs until you stop it, then the time is saved as an entry for today.",
+    "projectLabel": "Project",
+    "descriptionLabel": "Description (optional)",
+    "descriptionPlaceholder": "What are you working on?",
+    "cancelButton": "Cancel",
+    "submitButton": "Start",
+    "submittingButton": "Starting…"
+  },
+  "finishDialog": {
+    "title": "Save time entry",
+    "description": "Check the details before saving. Cancel to keep the timer running.",
+    "cancelButton": "Cancel",
+    "submitButton": "Save entry",
+    "submittingButton": "Saving…"
+  },
+  "liveWidget": {
+    "label": "Live timer",
+    "pause": "Pause timer",
+    "resume": "Resume timer",
+    "elapsed": "Elapsed time",
+    "pausedAt": "Paused at",
+    "stopAndSave": "Stop and save",
+    "discardLabel": "Discard timer",
+    "discardTooltip": "Discard",
+    "discardDialog": {
+      "title": "Discard this timer?",
+      "newDescription": "The {duration} tracked on {project} won't be saved.",
+      "resumedDescription": "Time tracked since you resumed won't be saved. The entry keeps its {duration}.",
+      "confirmButton": "Discard"
+    }
+  },
+  "dayEntries": {
+    "today": "Today",
+    "emptyTitle": "Nothing logged this day",
+    "emptyDescription": "Add an entry or start the timer.",
+    "total": "Total:",
+    "week": "Week",
+    "dayLabel": "{day}, {total}",
+    "deleteDialog": {
+      "title": "Delete this entry?",
+      "description": "{duration} on {project} will be removed. This can't be undone.",
+      "fallbackProject": "this project",
+      "confirmButton": "Delete"
+    }
+  },
+  "entryRow": {
+    "noDescription": "No description",
+    "live": "Live",
+    "paused": "Paused",
+    "edit": "Edit",
+    "editLabel": "Edit entry",
+    "continue": "Continue timer",
+    "continueLabel": "Continue timer on this entry",
+    "stopRunningFirst": "Stop the running timer first",
+    "delete": "Delete",
+    "deleteLabel": "Delete entry",
+    "status": {
+      "new": "New",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    }
+  },
+  "calendar": {
+    "label": "Monthly calendar",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "weekdays": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    "legend": {
+      "tracked": "Norm reached",
+      "missing": "Below norm",
+      "weekend": "Weekend"
+    },
+    "normOf": "of {norm} norm",
+    "progressLabel": "Monthly norm progress",
+    "metrics": {
+      "onNorm": "On norm",
+      "belowNorm": "Below norm",
+      "dailyAverage": "Daily avg"
+    }
+  },
+  "overview": {
+    "label": "Time summary",
+    "today": "Today",
+    "thisWeek": "This week",
+    "thisMonth": "This month",
+    "dailyNorm": "of {norm} daily norm",
+    "of": "of {total}",
+    "progressLabel": "Progress towards the norm"
+  }
+}

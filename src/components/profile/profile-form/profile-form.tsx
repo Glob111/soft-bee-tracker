@@ -5,16 +5,19 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 
+import { FormField } from '@components/common/form/form-field';
+import { RoleBadge } from '@components/crew/role-badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@ui/avatar';
 import { Button } from '@ui/button';
-import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@ui/card';
-import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@ui/field';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@ui/card';
+import { FieldGroup } from '@ui/field';
 import { Input } from '@ui/input';
 import { PROFILE_FORM_FIELDS } from '@components/profile/profile-form/profile-form.constants';
 import { useProfileStore } from '@/lib/api/auth';
 import type { UpdateProfileRequest, UserProfile } from '@/lib/api/auth';
 import { profileFormSchema, type ProfileFormValues } from '@/lib/schemas/profile-form.schema';
 import { getUserAvatarFallback } from '@/lib/utils';
+import content from './content.json';
 
 interface ProfileFormProps {
   profile: UserProfile;
@@ -69,70 +72,82 @@ export function ProfileForm({ profile }: ProfileFormProps) {
   const isBusy = isSubmitting || isSaving;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Profile</CardTitle>
-        <CardDescription>Update the details other people in the workspace see.</CardDescription>
-        {avatarUrl ? (
-          <CardAction>
-            <Avatar className='size-12'>
-              {/* a typo in the URL falls through to the initials rather than a broken image */}
-              <AvatarImage src={avatarUrl} alt={`${profile.firstName} ${profile.lastName}`.trim()} />
-              <AvatarFallback>{getUserAvatarFallback(profile)}</AvatarFallback>
-            </Avatar>
-          </CardAction>
-        ) : null}
-      </CardHeader>
-
-      <form onSubmit={handleFormSubmit} noValidate>
-        <CardContent>
-          <FieldGroup className='grid gap-5 sm:grid-cols-2'>
-            {PROFILE_FORM_FIELDS.map((field) => (
-              <Field key={field.name} data-invalid={Boolean(errors[field.name])}>
-                <FieldLabel htmlFor={field.name}>{field.label}</FieldLabel>
-                <Input
-                  id={field.name}
-                  type={field.type ?? 'text'}
-                  autoComplete={field.autoComplete}
-                  placeholder={field.placeholder}
-                  disabled={isBusy}
-                  aria-invalid={Boolean(errors[field.name])}
-                  {...register(field.name)}
-                />
-                {field.description ? <FieldDescription>{field.description}</FieldDescription> : null}
-                <FieldError errors={[errors[field.name]]} />
-              </Field>
-            ))}
-
-            <Field className='sm:col-span-2'>
-              <FieldLabel htmlFor='email'>Email</FieldLabel>
-              <Input id='email' type='email' value={profile.email} disabled readOnly />
-              <FieldDescription>Your Email is tied to your sign-in and cannot be changed here.</FieldDescription>
-            </Field>
-
-            <Field className='sm:col-span-2'>
-              <FieldLabel htmlFor='role'>Role</FieldLabel>
-              <Input id='role' type='role' value={profile.role} disabled readOnly />
-              <FieldDescription>Your Role cannot be changed here.</FieldDescription>
-            </Field>
-          </FieldGroup>
-        </CardContent>
-
-        <CardFooter className='justify-end gap-2'>
-          {saveError ? (
-            <p role='alert' className='text-destructive mr-auto text-sm'>
-              {saveError.message}
+    <div className='flex flex-col gap-6'>
+      <section className='bg-brand-black text-brand-white relative overflow-hidden rounded-2xl p-6 shadow-md sm:p-8'>
+        <div aria-hidden className='bg-glow absolute inset-0' />
+        <div className='relative flex flex-col gap-5 sm:flex-row sm:items-center'>
+          <Avatar className='ring-electric-green/60 size-20 ring-4'>
+            {/* a typo in the URL falls through to the initials rather than a broken image */}
+            {avatarUrl ? <AvatarImage src={avatarUrl} alt={`${profile.firstName} ${profile.lastName}`.trim()} /> : null}
+            <AvatarFallback className='bg-electric-green text-brand-black text-xl font-semibold'>
+              {getUserAvatarFallback(profile)}
+            </AvatarFallback>
+          </Avatar>
+          <div className='flex flex-col gap-2'>
+            <div className='flex flex-wrap items-center gap-2'>
+              <h2 className='text-24 font-semibold tracking-tight'>
+                {`${profile.firstName} ${profile.lastName}`.trim() || profile.username}
+              </h2>
+              <RoleBadge role={profile.role} />
+            </div>
+            <p className='text-brand-white/70 text-sm'>
+              @{profile.username} · {profile.email}
             </p>
-          ) : null}
-          <Button type='button' variant='outline' disabled={isBusy} onClick={handleCancelClick}>
-            Cancel
-          </Button>
-          <Button type='submit' disabled={!isDirty || isBusy}>
-            Save
-          </Button>
-        </CardFooter>
-      </form>
-    </Card>
+          </div>
+        </div>
+      </section>
+
+      <Card className='shadow-sm'>
+        <CardHeader className='border-b'>
+          <CardTitle>{content.detailsTitle}</CardTitle>
+          <CardDescription>{content.detailsDescription}</CardDescription>
+        </CardHeader>
+
+        <form onSubmit={handleFormSubmit} noValidate>
+          <CardContent>
+            <FieldGroup className='grid gap-5 sm:grid-cols-2'>
+              {PROFILE_FORM_FIELDS.map((field) => (
+                <FormField
+                  key={field.name}
+                  label={field.label}
+                  htmlFor={field.name}
+                  error={errors[field.name]}
+                  description={field.description}
+                >
+                  <Input
+                    id={field.name}
+                    type={field.type ?? 'text'}
+                    autoComplete={field.autoComplete}
+                    placeholder={field.placeholder}
+                    disabled={isBusy}
+                    aria-invalid={Boolean(errors[field.name])}
+                    {...register(field.name)}
+                  />
+                </FormField>
+              ))}
+
+              <FormField className='mb-5 sm:col-span-2' label={content.emailLabel} htmlFor='email' description={content.emailDescription}>
+                <Input id='email' type='email' value={profile.email} disabled readOnly />
+              </FormField>
+            </FieldGroup>
+          </CardContent>
+
+          <CardFooter className='justify-end gap-2'>
+            {saveError ? (
+              <p role='alert' className='text-destructive mr-auto text-sm'>
+                {saveError.message}
+              </p>
+            ) : null}
+            <Button type='button' variant='outline' disabled={isBusy} onClick={handleCancelClick}>
+              {content.cancelButton}
+            </Button>
+            <Button type='submit' disabled={!isDirty || isBusy}>
+              {isBusy ? content.savingButton : content.saveButton}
+            </Button>
+          </CardFooter>
+        </form>
+      </Card>
+    </div>
   );
 }
 

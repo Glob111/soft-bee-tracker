@@ -19,9 +19,11 @@ import type {
   UserProfile
 } from '@/lib/api/auth/types';
 import type { ApiError } from '@/types/api-error';
+import content from './content.json';
 
 interface UseAuthMutationOptions {
   onSuccess?: () => void;
+  successMessage?: string;
 }
 
 export async function signInWithPassword(params: SignInRequest): Promise<void> {
@@ -44,7 +46,7 @@ export async function signInWithPassword(params: SignInRequest): Promise<void> {
   if (profile?.isBlocked) {
     await supabase.auth.signOut();
     throw {
-      message: 'Your account has been blocked. Please contact an administrator.',
+      message: content.blocked,
       statusCode: 403
     } satisfies ApiError;
   }
@@ -132,7 +134,7 @@ export function useSignUp(options?: UseAuthMutationOptions) {
   return useMutation({
     mutationFn: signUpWithProfile,
     onSuccess: () => {
-      toast.success('Account created! Please check your email to verify your profile.');
+      toast.success(content.signUpSuccess);
       options?.onSuccess?.();
     },
     onError: (error: ApiError) => {
@@ -162,7 +164,7 @@ export function useRecoverPassword(options?: UseAuthMutationOptions) {
   return useMutation({
     mutationFn: recoverPassword,
     onSuccess: () => {
-      toast.success('Reset link sent! Please check your mailbox.');
+      toast.success(content.resetLinkSent);
       options?.onSuccess?.();
     },
     onError: (error: ApiError) => {
@@ -189,7 +191,7 @@ export function useUpdatePassword(options?: UseAuthMutationOptions) {
   return useMutation({
     mutationFn: updatePassword,
     onSuccess: () => {
-      toast.success('Password changed! You can now log in.');
+      toast.success(options?.successMessage ?? content.passwordChanged);
       options?.onSuccess?.();
     },
     onError: (error: ApiError) => {
@@ -204,7 +206,7 @@ export async function updateProfile(params: UpdateProfileRequest): Promise<UserP
 
   if (userError || !userData.user) {
     throw {
-      message: 'Your session has expired. Please sign in again.',
+      message: content.sessionExpired,
       statusCode: 401
     } satisfies ApiError;
   }
@@ -219,7 +221,7 @@ export async function updateProfile(params: UpdateProfileRequest): Promise<UserP
   if (error) {
     throw {
       // 23505 is the unique violation on users.username; the raw text leaks the constraint name
-      message: error.code === '23505' ? 'That username is already taken.' : error.message,
+      message: error.code === '23505' ? content.usernameTaken : error.message,
       statusCode: error.code === '23505' ? 409 : 500
     } satisfies ApiError;
   }

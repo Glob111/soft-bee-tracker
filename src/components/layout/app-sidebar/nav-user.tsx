@@ -19,12 +19,14 @@ import { ROUTES } from '@/constants';
 import { getUserAvatarFallback } from '@/lib/utils';
 import { useSignOut } from '@/lib/api/auth';
 import type { UserProfile } from '@/lib/api/auth';
+import content from '../content.json';
 
 interface NavUserProps {
   profile: UserProfile;
+  onNavigate?: () => void;
 }
 
-export function NavUser({ profile }: NavUserProps) {
+export function NavUser({ profile, onNavigate }: NavUserProps) {
   const router = useRouter();
   const { isMobile } = useSidebar();
   const signOut = useSignOut({
@@ -72,14 +74,14 @@ export function NavUser({ profile }: NavUserProps) {
 
             <DropdownMenuSeparator />
 
-            <DropdownMenuItem render={<Link href={ROUTES.PROFILE} />}>
+            <DropdownMenuItem render={<Link href={ROUTES.PROFILE} onClick={onNavigate} />}>
               <UserIcon />
-              Profile
+              {content.accountMenu.profile}
             </DropdownMenuItem>
 
             <DropdownMenuItem variant='destructive' disabled={signOut.isPending} onClick={handleSignOutClick}>
               <LogOutIcon />
-              Log out
+              {content.accountMenu.logOut}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
