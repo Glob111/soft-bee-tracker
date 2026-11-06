@@ -6,6 +6,7 @@ export const ROUTES = {
   FORGOT_PASSWORD: '/forgot-password',
   AUTH_CONFIRM: '/auth/confirm',
   UPDATE_PASSWORD: '/auth/update-password',
+  SIGN_OUT: '/auth/sign-out',
   ACCESS_DENIED: '/access-denied',
   DASHBOARD: '/dashboard',
   PROJECTS: '/projects',
@@ -23,6 +24,7 @@ export const PUBLIC_ROUTES_LIST = [
   ROUTES.FORGOT_PASSWORD,
   ROUTES.AUTH_CONFIRM,
   ROUTES.UPDATE_PASSWORD,
+  ROUTES.SIGN_OUT,
   ROUTES.ACCESS_DENIED
 ];
 

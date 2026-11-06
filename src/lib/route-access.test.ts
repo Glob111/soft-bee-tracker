@@ -72,6 +72,7 @@ describe('getRouteAccess', () => {
       ROUTES.FORGOT_PASSWORD,
       ROUTES.AUTH_CONFIRM,
       ROUTES.UPDATE_PASSWORD,
+      ROUTES.SIGN_OUT,
       ROUTES.ACCESS_DENIED
     ]) {
       expect(getRouteAccess(route, null)).toBe('allowed');
@@ -83,6 +84,10 @@ describe('getRouteAccess', () => {
     expect(getRouteAccess(ROUTES.REGISTER, { role: 'admin' })).toBe('guest-only');
     expect(getRouteAccess(ROUTES.UPDATE_PASSWORD, { role: 'worker' })).toBe('allowed');
     expect(getRouteAccess(ROUTES.ACCESS_DENIED, { role: 'worker' })).toBe('allowed');
+  });
+
+  it('lets a session without a role reach sign-out so it can be reset', () => {
+    expect(getRouteAccess(ROUTES.SIGN_OUT, { role: null })).toBe('allowed');
   });
 });
 

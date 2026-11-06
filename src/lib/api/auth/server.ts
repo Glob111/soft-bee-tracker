@@ -6,6 +6,7 @@ import { ROUTES } from '@/constants';
 import { createServerClient } from '@/lib/supabase/server';
 import { mapUserRowToProfile, USER_COLUMNS } from '@/lib/api/auth/mappers';
 import type { UserProfile } from '@/lib/api/auth/types';
+import type { ApiError } from '@/types/api-error';
 import { getRouteAccess, getRouteSessionFromClaim, type RouteSession } from '@/lib/route-access';
 
 // server-component/route-handler counterpart of useSessionProfile.
@@ -21,8 +22,19 @@ export async function getSessionProfile(): Promise<UserProfile | null> {
 
   const { data, error } = await supabase.from('users').select(USER_COLUMNS).eq('id', userData.user.id).single();
 
+  // no profile row: the session can never use the app. server components can't
+  // write cookies, so hand off to the route handler that clears them
+  if (error?.code === NO_ROWS_ERROR_CODE) {
+    redirect(ROUTES.SIGN_OUT);
+  }
+
+  // anything else (timeout, network, RLS) is likely transient: surface it to the
+  // error boundary instead of logging the user out
   if (error) {
-    return null;
+    throw {
+      message: error.message,
+      statusCode: 500
+    } satisfies ApiError;
   }
 
   return mapUserRowToProfile(data);
@@ -52,3 +64,6 @@ export async function requireRouteAccess(pathname: string): Promise<void> {
     redirect(ROUTES.ACCESS_DENIED);
   }
 }
+
+// postgREST code for .single() matching zero rows
+const NO_ROWS_ERROR_CODE = 'PGRST116';

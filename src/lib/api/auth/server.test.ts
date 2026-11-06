@@ -3,8 +3,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ROUTES } from '@/constants';
 import type { UserRole } from '@/lib/api/auth/types';
 
-const { getClaims, redirect } = vi.hoisted(() => ({
+const { getClaims, getUser, single, redirect } = vi.hoisted(() => ({
   getClaims: vi.fn(),
+  getUser: vi.fn(),
+  single: vi.fn(),
   // next/navigation's redirect throws to stop rendering; mirror that
   redirect: vi.fn((url: string) => {
     throw new Error(`NEXT_REDIRECT:${url}`);
@@ -14,12 +16,44 @@ const { getClaims, redirect } = vi.hoisted(() => ({
 vi.mock('next/navigation', () => ({ redirect }));
 
 vi.mock('@/lib/supabase/server', () => ({
-  createServerClient: () => Promise.resolve({ auth: { getClaims } })
+  createServerClient: () =>
+    Promise.resolve({
+      auth: { getClaims, getUser },
+      from: () => ({ select: () => ({ eq: () => ({ single }) }) })
+    })
 }));
 
 // node-only unit test of the server helper; the rule guards client bundles
 // eslint-disable-next-line @typescript-eslint/no-restricted-imports
-import { getRouteSession, requireRouteAccess } from '@/lib/api/auth/server';
+import { getRouteSession, getSessionProfile, requireRouteAccess } from '@/lib/api/auth/server';
+
+describe('getSessionProfile', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns null without a user', async () => {
+    getUser.mockResolvedValue({ data: { user: null }, error: null });
+
+    await expect(getSessionProfile()).resolves.toBeNull();
+    expect(single).not.toHaveBeenCalled();
+  });
+
+  it('resets the session when the profile row is missing', async () => {
+    getUser.mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null });
+    single.mockResolvedValue({ data: null, error: { code: 'PGRST116', message: 'no rows' } });
+
+    await expect(getSessionProfile()).rejects.toThrow(`NEXT_REDIRECT:${ROUTES.SIGN_OUT}`);
+  });
+
+  it('throws instead of signing out on other database errors', async () => {
+    getUser.mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null });
+    single.mockResolvedValue({ data: null, error: { code: '57014', message: 'statement timeout' } });
+
+    await expect(getSessionProfile()).rejects.toEqual({ message: 'statement timeout', statusCode: 500 });
+    expect(redirect).not.toHaveBeenCalled();
+  });
+});
 
 describe('getRouteSession', () => {
   beforeEach(() => {
