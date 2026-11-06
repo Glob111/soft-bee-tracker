@@ -32,6 +32,7 @@ jobs:
 
       - name: Verify generated DB types are up to date
         run: |
+          set -o pipefail
           supabase gen types typescript --local | tail +1 > src/types/supabase-schema.ts
           git diff --exit-code -- src/types/supabase-schema.ts || {
             echo "Error: src/types/supabase-schema.ts is out of date — run 'yarn sb:db:types' and commit the result"
