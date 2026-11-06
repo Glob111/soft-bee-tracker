@@ -46,6 +46,21 @@ describe('getSessionProfile', () => {
     await expect(getSessionProfile()).rejects.toThrow(`NEXT_REDIRECT:${ROUTES.SIGN_OUT}`);
   });
 
+  it('resets the session of a blocked user', async () => {
+    getUser.mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null });
+    single.mockResolvedValue({ data: buildUserRow({ is_blocked: true }), error: null });
+
+    await expect(getSessionProfile()).rejects.toThrow(`NEXT_REDIRECT:${ROUTES.SIGN_OUT}`);
+  });
+
+  it('returns the profile of an active user', async () => {
+    getUser.mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null });
+    single.mockResolvedValue({ data: buildUserRow(), error: null });
+
+    await expect(getSessionProfile()).resolves.toMatchObject({ id: 'user-1', isBlocked: false });
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
   it('throws instead of signing out on other database errors', async () => {
     getUser.mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null });
     single.mockResolvedValue({ data: null, error: { code: '57014', message: 'statement timeout' } });
@@ -117,8 +132,51 @@ describe('requireRouteAccess', () => {
     await expect(requireRouteAccess(route)).resolves.toBeUndefined();
     expect(redirect).not.toHaveBeenCalled();
   });
+
+  it('resets the session of a blocked user with an allowed role', async () => {
+    signInAs('admin', { is_blocked: true });
+
+    await expect(requireRouteAccess(ROUTES.USERS)).rejects.toThrow(`NEXT_REDIRECT:${ROUTES.SIGN_OUT}`);
+  });
+
+  it('checks the role before loading the profile', async () => {
+    signInAs('worker');
+
+    await expect(requireRouteAccess(ROUTES.CREW)).rejects.toThrow(`NEXT_REDIRECT:${ROUTES.ACCESS_DENIED}`);
+    expect(single).not.toHaveBeenCalled();
+  });
 });
 
-function signInAs(role: UserRole) {
+function signInAs(role: UserRole, row: Partial<UserRow> = {}) {
   getClaims.mockResolvedValue({ data: { claims: { sub: 'user-1', user_role: role } }, error: null });
+  getUser.mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null });
+  single.mockResolvedValue({ data: buildUserRow(row), error: null });
 }
+
+// role is deliberately 'worker' here: the guard must use the claim, not this row
+function buildUserRow(overrides: Partial<UserRow> = {}): UserRow {
+  return {
+    id: 'user-1',
+    created_at: '',
+    updated_at: '',
+    username: 'test',
+    email: 'test@softbee.dev',
+    first_name: 'Test',
+    last_name: 'User',
+    phone: null,
+    avatar_url: null,
+    role: 'worker',
+    date_employment: null,
+    positions: null,
+    salary: null,
+    salary_info: null,
+    type_salary: null,
+    linkedin: null,
+    upwork: null,
+    is_confirmed: true,
+    is_blocked: false,
+    ...overrides
+  };
+}
+
+type UserRow = Record<string, string | number | boolean | null | string[]>;

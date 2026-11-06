@@ -37,7 +37,15 @@ export async function getSessionProfile(): Promise<UserProfile | null> {
     } satisfies ApiError;
   }
 
-  return mapUserRowToProfile(data);
+  const profile = mapUserRowToProfile(data);
+
+  // the JWT hook copies user_role only, so the proxy can't see a block; cut a
+  // blocked user's live session here, the same way signInWithPassword does
+  if (profile.isBlocked) {
+    redirect(ROUTES.SIGN_OUT);
+  }
+
+  return profile;
 }
 
 // server counterpart of the proxy session: role from the verified user_role
@@ -53,6 +61,8 @@ export async function getRouteSession(): Promise<RouteSession | null> {
 // defense in depth for role-restricted pages: the proxy already blocks these
 // routes, but the page re-checks with the same decision (getRouteAccess) and
 // the same role source, so it stays protected if the proxy matcher drifts.
+// it then loads the profile only to cut blocked users (getSessionProfile);
+// the role itself never comes from public.users.
 export async function requireRouteAccess(pathname: string): Promise<void> {
   const access = getRouteAccess(pathname, await getRouteSession());
 
@@ -62,6 +72,10 @@ export async function requireRouteAccess(pathname: string): Promise<void> {
 
   if (access === 'denied') {
     redirect(ROUTES.ACCESS_DENIED);
+  }
+
+  if (!(await getSessionProfile())) {
+    redirect(ROUTES.LOGIN);
   }
 }
 
