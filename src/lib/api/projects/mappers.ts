@@ -4,6 +4,9 @@ import type { Database } from '@/types';
 type ProjectRow = Database['public']['Tables']['projects']['Row'];
 type InputProjectRow = Database['public']['Tables']['projects']['Insert'];
 
+export const PROJECT_COLUMNS =
+  'id, created_at, updated_at, name, client, note, picture_url, start_date, end_date, status, type, manager_id';
+
 export function mapProjectRowToProject(row: ProjectRow): Project {
   return {
     id: row.id,

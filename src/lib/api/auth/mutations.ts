@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 
 import { ROUTES } from '@/constants';
 import { authKeys, fetchSessionProfile } from '@/lib/api/auth/queries';
-import { mapProfileUpdateToUserRow, mapUserRowToProfile } from '@/lib/api/auth/mappers';
+import { mapProfileUpdateToUserRow, mapUserRowToProfile, USER_COLUMNS } from '@/lib/api/auth/mappers';
 import { createBrowserClient } from '@/lib/supabase/client';
 import { clearSupabaseAuthCookies } from '@/lib/supabase/cookies';
 import { resetClientState } from '@/lib/api/reset-client-state';
@@ -213,7 +213,7 @@ export async function updateProfile(params: UpdateProfileRequest): Promise<UserP
     .from('users')
     .update(mapProfileUpdateToUserRow(params))
     .eq('id', userData.user.id)
-    .select('*')
+    .select(USER_COLUMNS)
     .single();
 
   if (error) {

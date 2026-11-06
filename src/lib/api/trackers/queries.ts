@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 
-import { mapTrackersRowsToTrackers } from '@/lib/api/trackers/mappers';
+import { mapTrackersRowsToTrackers, TRACKER_COLUMNS } from '@/lib/api/trackers/mappers';
 import type { Tracker } from '@/lib/api/trackers/types';
 import { createBrowserClient } from '@/lib/supabase/client';
 import type { ApiError } from '@/types/api-error';
@@ -15,7 +15,7 @@ export const trackerKeys = {
 
 export async function getTrackers(): Promise<Tracker[]> {
   const supabase = createBrowserClient();
-  const { data, error, status } = await supabase.from('trackers').select('*').order('date', { ascending: false });
+  const { data, error, status } = await supabase.from('trackers').select(TRACKER_COLUMNS).order('date', { ascending: false });
 
   if (error) {
     throw {

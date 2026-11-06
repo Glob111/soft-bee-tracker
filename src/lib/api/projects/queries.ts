@@ -1,11 +1,11 @@
-import { mapProjectsRowsToProjects } from '@/lib/api/projects/mappers';
+import { mapProjectsRowsToProjects, PROJECT_COLUMNS } from '@/lib/api/projects/mappers';
 import type { Project } from '@/lib/api/projects/types';
 import { createBrowserClient } from '@/lib/supabase/client';
 import type { ApiError } from '@/types/api-error';
 
 export async function getProjects(): Promise<Project[]> {
   const supabase = createBrowserClient();
-  const { data, error, status } = await supabase.from('projects').select('*');
+  const { data, error, status } = await supabase.from('projects').select(PROJECT_COLUMNS);
 
   if (error) {
     throw {
@@ -33,7 +33,7 @@ export async function getUserProjects(): Promise<Project[]> {
     return [];
   }
 
-  const { data, error, status } = await supabase.from('projects').select('*').eq('manager_id', userData.user.id);
+  const { data, error, status } = await supabase.from('projects').select(PROJECT_COLUMNS).eq('manager_id', userData.user.id);
 
   if (error) {
     throw {

@@ -17,4 +17,4 @@ export const ALLOW_NO_AUTHORIZED_ROUTES_LIST = ['/login', '/register', '/forgot-
 
 export const ALLOW_AUTHORIZED_ROUTES_LIST = ['/login', '/register'];
 
-export const ADMIN_ROLE = 'admin'
+export const ADMIN_ROLE = 'admin';

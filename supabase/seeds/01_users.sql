@@ -1,8 +1,9 @@
--- seed: local development users, one per role
+-- seed: local development users, one per role (local only: `supabase db reset`;
+-- `supabase db push` never applies seeds to a remote project)
 -- password for all three: Password1
 --   admin@softbee.dev   -> admin
 --   manager@softbee.dev -> manager
---   worker@softbee.dev  -> worker
+--   worker@softbee.dev  -> worker ("Staff" in product terms)
 -- inserting into auth.users fires public.handle_new_user, which creates the
 -- public.users profile with role 'worker'; roles are promoted afterwards the
 -- same way an admin would do it in production.
@@ -48,7 +49,7 @@ values
     'authenticated',
     'authenticated',
     'manager@softbee.dev',
-    extensions.crypt('Password11', extensions.gen_salt('bf')),
+    extensions.crypt('Password1', extensions.gen_salt('bf')),
     now(),
     '{"provider": "email", "providers": ["email"]}',
     '{"username": "manager", "first_name": "Mila", "last_name": "Managerova"}',
