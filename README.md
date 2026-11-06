@@ -139,11 +139,11 @@ Components import hooks from `@/lib/api/<feature>`. They must not call Supabase,
 | Signed in on `/login` or `/register` | Redirect to `/dashboard` |
 | Role not allowed | Rewrite to `/access-denied` with status 403 (the URL stays the same) |
 
-Role-restricted pages also call `requireRouteAccess(ROUTES.X)` from `@/lib/api/auth/server` at the top of `page.tsx`. It re-checks the role from `public.users`, so the page stays protected even if the proxy rules drift: no session redirects to `/login`, and a wrong role redirects to `/access-denied`.
+Role-restricted pages also call `requireRouteAccess(ROUTES.X)` from `@/lib/api/auth/server` at the top of `page.tsx`. It re-runs the proxy's `getRouteAccess` decision with the role from the same verified `user_role` claim, so the page stays protected even if the proxy matcher drifts: no session redirects to `/login`, and a wrong role redirects to `/access-denied`.
 
 The sidebar (`src/components/layout/app-sidebar/app-sidebar.tsx`) uses the same rules to hide links a role can't open.
 
-The access rules live in `src/constants/index.ts`: `PUBLIC_ROUTES_LIST`, `GUEST_ONLY_ROUTES_LIST` and `ROLE_RESTRICTED_ROUTES`. To restrict a new page, add it to `ROLE_RESTRICTED_ROUTES` and to the matrix in `src/lib/route-access.test.ts`, then call `requireRouteAccess` in its `page.tsx`. A missing or unknown role is denied. Hiding a page is not data security: RLS still decides what each request can read or write.
+The access rules live in `src/constants/index.ts`: `PUBLIC_ROUTES_LIST`, `GUEST_ONLY_ROUTES_LIST` and `ROLE_RESTRICTED_ROUTES`. To restrict a new page, add it to `ROLE_RESTRICTED_ROUTES` and to the matrix in `src/lib/route-access.test.ts`, then call `requireRouteAccess` in its `page.tsx`. The proxy, page checks and sidebar all read the role from the `user_role` claim (`getRouteSessionFromClaim`), never from `public.users`, so they can't disagree. A missing or unknown role is denied. Hiding a page is not data security: RLS still decides what each request can read or write.
 
 #### Verify route protection
 

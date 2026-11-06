@@ -6,7 +6,7 @@ import { ROUTES } from '@/constants';
 import { createServerClient } from '@/lib/supabase/server';
 import { mapUserRowToProfile, USER_COLUMNS } from '@/lib/api/auth/mappers';
 import type { UserProfile } from '@/lib/api/auth/types';
-import { canRoleAccessRoute } from '@/lib/route-access';
+import { getRouteAccess, getRouteSessionFromClaim, type RouteSession } from '@/lib/route-access';
 
 // server-component/route-handler counterpart of useSessionProfile.
 // imported via '@/lib/api/auth/server' (not the barrel) so client bundles
@@ -28,19 +28,27 @@ export async function getSessionProfile(): Promise<UserProfile | null> {
   return mapUserRowToProfile(data);
 }
 
-// defense in depth for role-restricted pages: the proxy already blocks these
-// routes, but the page re-checks so it stays protected if the proxy matcher
-// or route table drifts. reads the role from public.users through RLS.
-export async function requireRouteAccess(pathname: string): Promise<UserProfile> {
-  const profile = await getSessionProfile();
+// server counterpart of the proxy session: role from the verified user_role
+// claim, so the sidebar, page guards, proxy and RLS never disagree.
+// null means no valid session.
+export async function getRouteSession(): Promise<RouteSession | null> {
+  const supabase = await createServerClient();
+  const { data, error } = await supabase.auth.getClaims();
 
-  if (!profile) {
+  return error || !data ? null : getRouteSessionFromClaim(data.claims.user_role);
+}
+
+// defense in depth for role-restricted pages: the proxy already blocks these
+// routes, but the page re-checks with the same decision (getRouteAccess) and
+// the same role source, so it stays protected if the proxy matcher drifts.
+export async function requireRouteAccess(pathname: string): Promise<void> {
+  const access = getRouteAccess(pathname, await getRouteSession());
+
+  if (access === 'login') {
     redirect(ROUTES.LOGIN);
   }
 
-  if (!canRoleAccessRoute(pathname, profile.role)) {
+  if (access === 'denied') {
     redirect(ROUTES.ACCESS_DENIED);
   }
-
-  return profile;
 }

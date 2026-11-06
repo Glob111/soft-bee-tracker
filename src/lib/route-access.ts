@@ -27,6 +27,13 @@ export function canRoleAccessRoute(pathname: string, role: UserRole | null): boo
   return role !== null && allowedRoles.includes(role);
 }
 
+// the single source of truth for the role: the verified user_role JWT claim,
+// the same value RLS reads through private.jwt_role(). the proxy, page guards
+// and sidebar all build their session through this, never from public.users.
+export function getRouteSessionFromClaim(roleClaim: string | null | undefined): RouteSession {
+  return { role: parseUserRole(typeof roleClaim === 'string' ? roleClaim : null) };
+}
+
 export function parseUserRole(value: string | null | undefined): UserRole | null {
   return ALL_ROLES.find((role) => role === value) ?? null;
 }

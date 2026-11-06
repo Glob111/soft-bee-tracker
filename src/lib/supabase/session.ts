@@ -3,7 +3,7 @@ import { createServerClient } from '@supabase/ssr';
 import { type NextRequest, NextResponse } from 'next/server';
 
 import { ROUTES } from '@/constants';
-import { getRouteAccess, parseUserRole, type RouteSession } from '@/lib/route-access';
+import { getRouteAccess, getRouteSessionFromClaim } from '@/lib/route-access';
 import { Database } from '@/types';
 
 function applyResponseCookies(source: NextResponse, target: NextResponse) {
@@ -49,7 +49,7 @@ export async function updateSession(request: NextRequest) {
   // getClaims verifies the JWT (and refreshes it through setAll above), so the
   // role read here is the same claims.user_role that RLS checks.
   const { data, error } = await supabase.auth.getClaims();
-  const session = error || !data ? null : getRouteSession(data.claims.user_role);
+  const session = error || !data ? null : getRouteSessionFromClaim(data.claims.user_role);
 
   const access = getRouteAccess(request.nextUrl.pathname, session);
 
@@ -67,10 +67,6 @@ export async function updateSession(request: NextRequest) {
   }
 
   return supabaseResponse;
-}
-
-function getRouteSession(roleClaim: string | null | undefined): RouteSession {
-  return { role: parseUserRole(typeof roleClaim === 'string' ? roleClaim : null) };
 }
 
 function buildUrl(request: NextRequest, pathname: string): URL {

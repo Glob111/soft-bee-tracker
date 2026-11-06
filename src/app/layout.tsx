@@ -4,7 +4,7 @@ import { Toaster } from '@ui/sonner';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@ui/sidebar';
 import { AppSidebar } from '@components/layout/app-sidebar/app-sidebar';
 import { cn, getUserAvatarFallback } from '@/lib/utils';
-import { getSessionProfile } from '@/lib/api/auth/server';
+import { getRouteSession, getSessionProfile } from '@/lib/api/auth/server';
 import { QueryProvider } from '@/providers/query-provider';
 import { AvatarDropdown } from '@/components/layout/app-sidebar/avatar-dropdown';
 
@@ -12,7 +12,7 @@ const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // app chrome only belongs to signed-in routes; /login and friends render bare
-  const profile = await getSessionProfile();
+  const [profile, session] = await Promise.all([getSessionProfile(), getRouteSession()]);
 
   const userAvatar = profile?.avatarUrl ? profile.avatarUrl : undefined;
 
@@ -22,7 +22,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <QueryProvider>
           {profile ? (
             <SidebarProvider>
-              <AppSidebar profile={profile} />
+              <AppSidebar profile={profile} role={session?.role ?? null} />
               <SidebarInset>
                 <header className='flex h-12 shrink-0 items-center justify-between gap-2 border-b px-4'>
                   <SidebarTrigger />

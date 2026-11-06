@@ -3,9 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ROUTES } from '@/constants';
 import type { UserRole } from '@/lib/api/auth/types';
 
-const { getUser, single, redirect } = vi.hoisted(() => ({
-  getUser: vi.fn(),
-  single: vi.fn(),
+const { getClaims, redirect } = vi.hoisted(() => ({
+  getClaims: vi.fn(),
   // next/navigation's redirect throws to stop rendering; mirror that
   redirect: vi.fn((url: string) => {
     throw new Error(`NEXT_REDIRECT:${url}`);
@@ -15,16 +14,36 @@ const { getUser, single, redirect } = vi.hoisted(() => ({
 vi.mock('next/navigation', () => ({ redirect }));
 
 vi.mock('@/lib/supabase/server', () => ({
-  createServerClient: () =>
-    Promise.resolve({
-      auth: { getUser },
-      from: () => ({ select: () => ({ eq: () => ({ single }) }) })
-    })
+  createServerClient: () => Promise.resolve({ auth: { getClaims } })
 }));
 
 // node-only unit test of the server helper; the rule guards client bundles
 // eslint-disable-next-line @typescript-eslint/no-restricted-imports
-import { requireRouteAccess } from '@/lib/api/auth/server';
+import { getRouteSession, requireRouteAccess } from '@/lib/api/auth/server';
+
+describe('getRouteSession', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns null without valid claims', async () => {
+    getClaims.mockResolvedValue({ data: null, error: new Error('invalid jwt') });
+
+    await expect(getRouteSession()).resolves.toBeNull();
+  });
+
+  it('reads the role from the user_role claim', async () => {
+    signInAs('manager');
+
+    await expect(getRouteSession()).resolves.toEqual({ role: 'manager' });
+  });
+
+  it('fails closed on a missing or unknown claim', async () => {
+    getClaims.mockResolvedValue({ data: { claims: { sub: 'user-1', user_role: 'owner' } }, error: null });
+
+    await expect(getRouteSession()).resolves.toEqual({ role: null });
+  });
+});
 
 describe('requireRouteAccess', () => {
   beforeEach(() => {
@@ -32,7 +51,7 @@ describe('requireRouteAccess', () => {
   });
 
   it('redirects to login without a session', async () => {
-    getUser.mockResolvedValue({ data: { user: null }, error: null });
+    getClaims.mockResolvedValue({ data: null, error: null });
 
     await expect(requireRouteAccess(ROUTES.CREW)).rejects.toThrow(`NEXT_REDIRECT:${ROUTES.LOGIN}`);
   });
@@ -48,43 +67,24 @@ describe('requireRouteAccess', () => {
     await expect(requireRouteAccess(route)).rejects.toThrow(`NEXT_REDIRECT:${ROUTES.ACCESS_DENIED}`);
   });
 
+  it('redirects to access denied when the claim is missing', async () => {
+    getClaims.mockResolvedValue({ data: { claims: { sub: 'user-1' } }, error: null });
+
+    await expect(requireRouteAccess(ROUTES.CREW)).rejects.toThrow(`NEXT_REDIRECT:${ROUTES.ACCESS_DENIED}`);
+  });
+
   it.each<[string, UserRole]>([
     [ROUTES.CREW, 'manager'],
     [ROUTES.REPORTS, 'manager'],
     [ROUTES.USERS, 'admin']
-  ])('returns the profile on %s for %s', async (route, role) => {
+  ])('allows %s for %s', async (route, role) => {
     signInAs(role);
 
-    await expect(requireRouteAccess(route)).resolves.toMatchObject({ role });
+    await expect(requireRouteAccess(route)).resolves.toBeUndefined();
     expect(redirect).not.toHaveBeenCalled();
   });
 });
 
 function signInAs(role: UserRole) {
-  getUser.mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null });
-  single.mockResolvedValue({ data: buildUserRow(role), error: null });
-}
-
-function buildUserRow(role: UserRole) {
-  return {
-    id: 'user-1',
-    created_at: '',
-    updated_at: '',
-    username: 'test',
-    email: 'test@softbee.dev',
-    first_name: 'Test',
-    last_name: 'User',
-    phone: null,
-    avatar_url: null,
-    role,
-    date_employment: null,
-    positions: null,
-    salary: null,
-    salary_info: null,
-    type_salary: null,
-    linkedin: null,
-    upwork: null,
-    is_confirmed: true,
-    is_blocked: false
-  };
+  getClaims.mockResolvedValue({ data: { claims: { sub: 'user-1', user_role: role } }, error: null });
 }
