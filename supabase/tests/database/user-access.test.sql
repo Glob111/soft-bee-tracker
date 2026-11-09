@@ -1,6 +1,6 @@
 begin;
 
-select plan(16);
+select plan(19);
 
 select hasnt_column('public', 'users', 'role', 'public.users has no role column');
 select hasnt_column('public', 'users', 'is_confirmed', 'public.users has no is_confirmed column');
@@ -12,6 +12,12 @@ select fk_ok(
   'user_access.user_id references users.id'
 );
 
+select isnt_definer('public', 'handle_new_user', 'handle_new_user is security invoker');
+select isnt_definer('private', 'custom_access_token_hook', 'custom_access_token_hook is security invoker');
+select hasnt_function('public', 'custom_access_token_hook', 'hook is not exposed in public');
+
+set local role supabase_auth_admin;
+
 insert into auth.users (instance_id, id, aud, role, email, raw_user_meta_data)
 values (
   '00000000-0000-0000-0000-000000000000',
@@ -22,6 +28,16 @@ values (
   '{"username": "newbie", "first_name": "New", "last_name": "Member", "role": "admin", "is_blocked": false}'
 );
 
+select set_config(
+  'test.hook_role',
+  private.custom_access_token_hook(
+    jsonb_build_object('user_id', '00000000-0000-0000-0000-000000000a01', 'claims', '{}'::jsonb)
+  ) -> 'claims' ->> 'user_role',
+  true
+);
+
+reset role;
+
 select results_eq(
   $$ select role::text, is_confirmed, is_blocked
      from public.user_access
@@ -31,9 +47,7 @@ select results_eq(
 );
 
 select is(
-  public.custom_access_token_hook(
-    jsonb_build_object('user_id', '00000000-0000-0000-0000-000000000a01', 'claims', '{}'::jsonb)
-  ) -> 'claims' ->> 'user_role',
+  current_setting('test.hook_role'),
   'admin',
   'custom_access_token_hook puts the user_access role on the jwt'
 );

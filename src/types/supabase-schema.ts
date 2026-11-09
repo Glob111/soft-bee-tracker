@@ -284,7 +284,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      [_ in never]: never
     }
     Enums: {
       project_status: "active" | "archived"
