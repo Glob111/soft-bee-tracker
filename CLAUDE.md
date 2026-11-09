@@ -157,7 +157,7 @@ src/lib/api/users/
 - Include concise rationale comments for non-trivial policy logic.
 - **Role checks must use JWT claims**, not `public.users` lookups in policies:
   - Prefer `(select private.is_manager_or_admin())` or `(select private.jwt_role())`.
-  - Claim `user_role` is set by `public.custom_access_token_hook` from `public.users.role`.
+  - Claim `user_role` is set by `private.custom_access_token_hook` from `public.user_access.role`.
   - Never authorize from `user_metadata`. Missing claim = fail closed.
   - Follow `.cursor/rules/supabase-db.mdc` for full JWT/RLS conventions.
 
