@@ -52,6 +52,7 @@ const ROUTE_CLASSIFICATION: Record<keyof typeof ROUTES, 'public' | readonly User
   AUTH_CONFIRM: 'public',
   UPDATE_PASSWORD: 'public',
   SIGN_OUT: 'public',
+  LINK_INVALID: 'public',
   ACCESS_DENIED: 'public',
   BLOCKED: 'public',
   TERMS: 'public',

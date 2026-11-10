@@ -1,14 +1,16 @@
+import { AuthApiError, AuthRetryableFetchError } from '@supabase/supabase-js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { UserRole } from '@/lib/api/auth/types';
 
-const { getRouteSession, resolveSessionProfile, maybeSingle, getUserById, eq, inviteUserByEmail } = vi.hoisted(() => ({
+const { getRouteSession, resolveSessionProfile, maybeSingle, getUserById, eq, inviteUserByEmail, updateRole } = vi.hoisted(() => ({
   getRouteSession: vi.fn(),
   resolveSessionProfile: vi.fn(),
   maybeSingle: vi.fn(),
   getUserById: vi.fn(),
   eq: vi.fn(),
-  inviteUserByEmail: vi.fn()
+  inviteUserByEmail: vi.fn(),
+  updateRole: vi.fn()
 }));
 
 vi.mock('@/lib/api/auth/server', () => ({ getRouteSession, resolveSessionProfile }));
@@ -21,6 +23,13 @@ vi.mock('@/lib/supabase/server', () => ({
           eq(column, value);
           return { maybeSingle };
         }
+      }),
+      update: (values: { role: UserRole }) => ({
+        eq: (_column: string, id: string) => ({
+          select: () => ({
+            single: () => updateRole(values, id) as Promise<{ error: { message: string; code?: string } | null }>
+          })
+        })
       })
     }),
     auth: { admin: { getUserById, inviteUserByEmail } }
@@ -42,6 +51,8 @@ describe('inviteMember', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     noExistingAccount();
+    inviteUserByEmail.mockResolvedValue({ data: { user: { id: 'user-new' } }, error: null });
+    updateRole.mockResolvedValue({ error: null });
   });
 
   describe('permission to invite', () => {
@@ -130,13 +141,52 @@ describe('inviteMember', () => {
       });
     });
 
-    it('rejects a repeat invitation that has not been accepted', async () => {
+    it('offers to resend a pending invitation instead of sending it again', async () => {
       signInAs('manager');
       existingAccount({ email_confirmed_at: null, invited_at: '2026-11-09T10:00:00Z' });
 
       await expect(inviteMember({ email: 'pending@softbee.dev', role: 'worker' })).resolves.toMatchObject({
-        status: 'already-invited'
+        status: 'already-invited',
+        canResend: true
       });
+      expect(inviteUserByEmail).not.toHaveBeenCalled();
+    });
+
+    it('resends a pending invitation on request', async () => {
+      signInAs('manager');
+      existingAccount({ email_confirmed_at: null, invited_at: '2026-11-09T10:00:00Z' });
+
+      await expect(inviteMember({ email: 'pending@softbee.dev', role: 'worker', resend: true })).resolves.toEqual({
+        status: 'resent',
+        message: 'Invite sent to pending@softbee.dev again.'
+      });
+      expect(inviteUserByEmail).toHaveBeenCalledWith('pending@softbee.dev');
+    });
+
+    it('never resends to an account that already accepted', async () => {
+      signInAs('admin');
+      existingAccount({ email_confirmed_at: '2026-11-01T10:00:00Z', invited_at: '2026-10-30T10:00:00Z' });
+
+      await expect(inviteMember({ email: 'worker@softbee.dev', role: 'worker', resend: true })).resolves.toMatchObject({
+        status: 'already-member'
+      });
+      expect(inviteUserByEmail).not.toHaveBeenCalled();
+    });
+
+    it.each([false, true])("won't let a manager resend an admin's pending admin invite, or learn its role (resend=%s)", async (resend) => {
+      signInAs('manager');
+      existingAccount({ email_confirmed_at: null, invited_at: '2026-11-09T10:00:00Z' }, 'admin');
+
+      const result = await inviteMember({ email: 'boss@softbee.dev', role: 'worker', resend });
+
+      expect(result).toEqual({
+        status: 'already-invited',
+        message: "boss@softbee.dev has already been invited and hasn't accepted yet. Ask an admin to send the invite again.",
+        canResend: false
+      });
+      expect(result.message).not.toContain('admin invite');
+      expect(inviteUserByEmail).not.toHaveBeenCalled();
+      expect(updateRole).not.toHaveBeenCalled();
     });
 
     it('reports a lookup failure without leaking it', async () => {
@@ -145,21 +195,73 @@ describe('inviteMember', () => {
 
       await expect(inviteMember({ email: 'new@softbee.dev', role: 'worker' })).resolves.toEqual({
         status: 'error',
-        message: "We couldn't check this invite. Try again in a moment."
+        message: "We couldn't send this invite. Try again in a moment."
       });
     });
   });
 
-  describe('a valid invite', () => {
+  describe('sending', () => {
     it.each<[UserRole, UserRole]>([
       ['admin', 'admin'],
       ['admin', 'manager'],
       ['manager', 'worker']
-    ])('passes every check for %s inviting a %s, and sends nothing yet', async (inviter, role) => {
+    ])('sends the invite for %s inviting a %s and stores that role', async (inviter, role) => {
       signInAs(inviter);
 
-      await expect(inviteMember({ email: 'new@softbee.dev', role })).resolves.toMatchObject({ status: 'not-sent' });
-      expect(inviteUserByEmail).not.toHaveBeenCalled();
+      await expect(inviteMember({ email: 'new@softbee.dev', role })).resolves.toEqual({
+        status: 'sent',
+        message: 'Invite sent to new@softbee.dev.'
+      });
+      expect(inviteUserByEmail).toHaveBeenCalledWith('new@softbee.dev');
+      expect(updateRole).toHaveBeenCalledWith({ role }, 'user-new');
+    });
+
+    it('treats an email the Auth server already knows as an existing account', async () => {
+      signInAs('admin');
+      inviteUserByEmail.mockResolvedValue({
+        data: { user: null },
+        error: new AuthApiError('A user with this email address has already been registered', 422, 'email_exists')
+      });
+
+      await expect(inviteMember({ email: 'new@softbee.dev', role: 'worker' })).resolves.toMatchObject({ status: 'already-member' });
+      expect(updateRole).not.toHaveBeenCalled();
+    });
+
+    it('reports the email rate limit so the user can try later', async () => {
+      signInAs('admin');
+      inviteUserByEmail.mockResolvedValue({
+        data: { user: null },
+        error: new AuthApiError('email rate limit exceeded', 429, 'over_email_send_rate_limit')
+      });
+
+      await expect(inviteMember({ email: 'new@softbee.dev', role: 'worker' })).resolves.toMatchObject({ status: 'rate-limited' });
+    });
+
+    it('reports an unreachable Auth server as a retryable error without details', async () => {
+      signInAs('admin');
+      inviteUserByEmail.mockResolvedValue({ data: { user: null }, error: new AuthRetryableFetchError('fetch failed', 0) });
+
+      await expect(inviteMember({ email: 'new@softbee.dev', role: 'worker' })).resolves.toEqual({
+        status: 'error',
+        message: "We couldn't send this invite. Try again in a moment."
+      });
+    });
+
+    it('treats a role write that matched no row as not saved', async () => {
+      signInAs('admin');
+      updateRole.mockResolvedValue({ error: { message: 'JSON object requested, multiple (or no) rows returned', code: 'PGRST116' } });
+
+      await expect(inviteMember({ email: 'new@softbee.dev', role: 'manager' })).resolves.toMatchObject({ status: 'error' });
+    });
+
+    it('says so when the invite went out but the role was not saved', async () => {
+      signInAs('admin');
+      updateRole.mockResolvedValue({ error: { message: 'connection reset' } });
+
+      await expect(inviteMember({ email: 'new@softbee.dev', role: 'manager' })).resolves.toEqual({
+        status: 'error',
+        message: "The invite to new@softbee.dev was sent, but their role couldn't be saved. Send the invite again to fix it."
+      });
     });
   });
 });
@@ -173,7 +275,7 @@ function noExistingAccount() {
   maybeSingle.mockResolvedValue({ data: null, error: null });
 }
 
-function existingAccount(user: { email_confirmed_at: string | null; invited_at: string | null }) {
-  maybeSingle.mockResolvedValue({ data: { id: 'user-2' }, error: null });
+function existingAccount(user: { email_confirmed_at: string | null; invited_at: string | null }, role: UserRole = 'worker') {
+  maybeSingle.mockResolvedValue({ data: { id: 'user-2', role }, error: null });
   getUserById.mockResolvedValue({ data: { user: { id: 'user-2', ...user } }, error: null });
 }

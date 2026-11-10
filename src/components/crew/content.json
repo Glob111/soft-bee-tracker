@@ -67,6 +67,7 @@
     "roleDescription": "Managers can approve time and see reports.",
     "cancelButton": "Cancel",
     "sendButton": "Send invite",
-    "networkError": "We couldn't reach the server. Check your connection and try again."
+    "networkError": "We couldn't reach the server. Check your connection and try again.",
+    "resendButton": "Resend invite"
   }
 }
