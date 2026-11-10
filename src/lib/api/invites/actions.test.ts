@@ -2,16 +2,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { UserRole } from '@/lib/api/auth/types';
 
-const { getRouteSession, getSessionProfile, maybeSingle, getUserById, eq, inviteUserByEmail } = vi.hoisted(() => ({
+const { getRouteSession, resolveSessionProfile, maybeSingle, getUserById, eq, inviteUserByEmail } = vi.hoisted(() => ({
   getRouteSession: vi.fn(),
-  getSessionProfile: vi.fn(),
+  resolveSessionProfile: vi.fn(),
   maybeSingle: vi.fn(),
   getUserById: vi.fn(),
   eq: vi.fn(),
   inviteUserByEmail: vi.fn()
 }));
 
-vi.mock('@/lib/api/auth/server', () => ({ getRouteSession, getSessionProfile }));
+vi.mock('@/lib/api/auth/server', () => ({ getRouteSession, resolveSessionProfile }));
 
 vi.mock('@/lib/supabase/server', () => ({
   createServiceClient: () => ({
@@ -54,7 +54,7 @@ describe('inviteMember', () => {
 
     it('refuses a session the Auth server no longer accepts', async () => {
       getRouteSession.mockResolvedValue({ role: 'admin' });
-      getSessionProfile.mockResolvedValue(null);
+      resolveSessionProfile.mockResolvedValue({ kind: 'none' });
 
       await expect(inviteMember({ email: 'new@softbee.dev', role: 'worker' })).resolves.toMatchObject({ status: 'forbidden' });
     });
@@ -75,9 +75,23 @@ describe('inviteMember', () => {
       expect(maybeSingle).not.toHaveBeenCalled();
     });
 
-    it('lets a blocked user redirect escape to sign-out', async () => {
+    // a thrown redirect would leave the useMutation call pending, so the reset
+    // comes back as a value the dialog follows with a full page load
+    it('returns the sign-out path for a blocked user instead of redirecting', async () => {
       getRouteSession.mockResolvedValue({ role: 'admin' });
-      getSessionProfile.mockRejectedValue(new Error('NEXT_REDIRECT:/auth/sign-out?reason=blocked'));
+      resolveSessionProfile.mockResolvedValue({ kind: 'reset', signOutPath: '/auth/sign-out?reason=blocked' });
+
+      await expect(inviteMember({ email: 'new@softbee.dev', role: 'worker' })).resolves.toEqual({
+        status: 'signed-out',
+        message: 'Your session has ended. Signing you out…',
+        signOutPath: '/auth/sign-out?reason=blocked'
+      });
+      expect(maybeSingle).not.toHaveBeenCalled();
+    });
+
+    it('lets next control-flow errors escape', async () => {
+      getRouteSession.mockResolvedValue({ role: 'admin' });
+      resolveSessionProfile.mockRejectedValue(new Error('NEXT_REDIRECT:/somewhere'));
 
       await expect(inviteMember({ email: 'new@softbee.dev', role: 'worker' })).rejects.toThrow('NEXT_REDIRECT');
     });
@@ -152,7 +166,7 @@ describe('inviteMember', () => {
 
 function signInAs(role: UserRole | null) {
   getRouteSession.mockResolvedValue({ role });
-  getSessionProfile.mockResolvedValue({ id: 'inviter-1', isBlocked: false });
+  resolveSessionProfile.mockResolvedValue({ kind: 'active', profile: { id: 'inviter-1', isBlocked: false } });
 }
 
 function noExistingAccount() {

@@ -79,9 +79,16 @@ export function InviteMemberDialog({ invitableRoles }: InviteMemberDialogProps) 
     }
   }
 
+  // a result describes the values that were submitted; once they change it no
+  // longer applies
+  function clearResultMessage() {
+    setResultMessage(null);
+  }
+
   function handleRoleChange(value: UserRole | null) {
     if (value) {
       roleField.onChange(value);
+      clearResultMessage();
     }
   }
 
@@ -108,7 +115,7 @@ export function InviteMemberDialog({ invitableRoles }: InviteMemberDialogProps) 
                 placeholder={content.inviteDialog.emailPlaceholder}
                 disabled={isBusy}
                 aria-invalid={Boolean(errors.email)}
-                {...register('email')}
+                {...register('email', { onChange: clearResultMessage })}
               />
             </FormField>
             <FormField
@@ -155,7 +162,8 @@ export function InviteMemberDialog({ invitableRoles }: InviteMemberDialogProps) 
 
 // field problems go under their fields; everything else is one message in the
 // dialog. nothing is sent yet (SBT-55), so a passing check stays in the dialog
-// instead of closing it as if an email went out
+// instead of closing it as if an email went out. a revoked or blocked session
+// leaves the page through sign-out
 function applyInviteResult(result: InviteMemberResult, handlers: InviteResultHandlers) {
   if (result.status === 'invalid') {
     if (result.fieldErrors.email) {
@@ -169,6 +177,12 @@ function applyInviteResult(result: InviteMemberResult, handlers: InviteResultHan
 
   if (result.status === 'not-sent') {
     toast.info(result.message);
+  }
+
+  // a full page load, not router.push: the sign-out route handler clears the
+  // session cookies and redirects, which client navigation can't follow
+  if (result.status === 'signed-out') {
+    window.location.assign(result.signOutPath);
   }
 
   handlers.setResultMessage(result.message);

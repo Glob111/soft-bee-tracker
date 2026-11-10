@@ -4,7 +4,7 @@ import { unstable_rethrow } from 'next/navigation';
 import { z } from 'zod';
 
 import type { UserRole } from '@/lib/api/auth/types';
-import { getRouteSession, getSessionProfile } from '@/lib/api/auth/server';
+import { getRouteSession, resolveSessionProfile } from '@/lib/api/auth/server';
 import { canInviteRole, getInvitableRoles } from '@/lib/api/invites/permissions';
 import type { InviteMemberInput, InviteMemberResult } from '@/lib/api/invites/types';
 import { formatText } from '@/lib/format-text';
@@ -26,11 +26,17 @@ import content from './content.json';
  */
 export async function inviteMember(input: InviteMemberInput): Promise<InviteMemberResult> {
   try {
-    const inviterRole = await getInviterRole();
+    const inviter = await getInviter();
 
-    if (inviterRole === undefined) {
+    if (inviter.kind === 'reset') {
+      return { status: 'signed-out', message: content.sessionEnded, signOutPath: inviter.signOutPath };
+    }
+
+    if (inviter.kind === 'none') {
       return { status: 'forbidden', message: content.signInRequired };
     }
+
+    const inviterRole = inviter.role;
 
     if (getInvitableRoles(inviterRole).length === 0) {
       return { status: 'forbidden', message: content.notAllowed };
@@ -66,27 +72,33 @@ export async function inviteMember(input: InviteMemberInput): Promise<InviteMemb
 
     return { status: 'not-sent', message: formatText(content.readyToSend, { email }) };
   } catch (error) {
-    // redirect() from the session checks (e.g. a blocked user sent to sign-out)
-    // must propagate so next performs the navigation
+    // next's own control-flow errors (e.g. dynamic rendering bailouts) must
+    // propagate; session resets come back as a 'signed-out' value instead
     unstable_rethrow(error);
 
     return { status: 'error', message: content.unexpectedError };
   }
 }
 
-// undefined: no usable session (signed out, revoked or blocked).
-// getSessionProfile asks the Auth server and redirects blocked users, so a
+// resolveSessionProfile asks the Auth server and catches blocked users, so a
 // session the proxy still trusts can't invite after it was revoked or blocked.
-async function getInviterRole(): Promise<UserRole | null | undefined> {
+// it returns the reset instead of redirecting: a redirect thrown from an action
+// called through useMutation targets the sign-out route handler, which the
+// client router can't render, and leaves the mutation pending
+async function getInviter(): Promise<Inviter> {
   const session = await getRouteSession();
 
   if (!session) {
-    return undefined;
+    return { kind: 'none' };
   }
 
-  const profile = await getSessionProfile();
+  const state = await resolveSessionProfile();
 
-  return profile ? session.role : undefined;
+  if (state.kind === 'active') {
+    return { kind: 'active', role: session.role };
+  }
+
+  return state;
 }
 
 // the service client reads other users' rows and auth data, which the
@@ -116,3 +128,5 @@ async function findExistingAccount(email: string): Promise<ExistingAccount> {
 }
 
 type ExistingAccount = 'member' | 'invited' | null;
+
+type Inviter = { kind: 'active'; role: UserRole | null } | { kind: 'none' } | { kind: 'reset'; signOutPath: string };

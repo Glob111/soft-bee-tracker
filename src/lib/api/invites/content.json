@@ -1,5 +1,6 @@
 {
   "signInRequired": "Sign in again to invite teammates.",
+  "sessionEnded": "Your session has ended. Signing you out…",
   "notAllowed": "Your role can't invite teammates.",
   "roleNotAllowed": "Your role can't invite someone as {role}.",
   "invalidInput": "Check the highlighted fields.",
