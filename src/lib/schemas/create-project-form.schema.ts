@@ -1,29 +1,30 @@
 import { z } from 'zod';
 
 import type { CreateProjectInput } from '@/lib/api/projects';
+import content from './content.json';
 
 const optionalUrlSchema = z
   .string()
   .trim()
-  .refine((value) => value === '' || z.url().safeParse(value).success, 'Enter a valid URL');
+  .refine((value) => value === '' || z.url().safeParse(value).success, content.project.invalidUrl);
 
 const optionalDateSchema = z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Enter a valid date')
+  .regex(/^\d{4}-\d{2}-\d{2}$/, content.project.invalidDate)
   .or(z.literal(''));
 
 export const createProjectFormSchema = z
   .object({
-    name: z.string().trim().min(1, 'Project name is required').max(255, 'Project name must be 255 characters or fewer'),
-    client: z.string().trim().min(1, 'Client is required').max(255, 'Client must be 255 characters or fewer'),
-    type: z.enum(['fixed_price', 'non_profit', 'time_material'], 'Select a project type'),
+    name: z.string().trim().min(1, content.project.nameRequired).max(255, content.project.nameTooLong),
+    client: z.string().trim().min(1, content.project.clientRequired).max(255, content.project.clientTooLong),
+    type: z.enum(['fixed_price', 'non_profit', 'time_material'], content.project.typeRequired),
     note: z.string().trim(),
     pictureUrl: optionalUrlSchema,
     startDate: optionalDateSchema,
     endDate: optionalDateSchema
   })
   .refine(({ startDate, endDate }) => !startDate || !endDate || endDate >= startDate, {
-    message: 'End date must be on or after the start date',
+    message: content.project.endBeforeStart,
     path: ['endDate']
   });
 

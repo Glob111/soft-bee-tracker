@@ -1,0 +1,72 @@
+{
+  "roles": {
+    "admin": "Admin",
+    "manager": "Manager",
+    "worker": "Staff"
+  },
+  "roleDescriptions": {
+    "worker": "Logs time on assigned projects.",
+    "manager": "Can approve time and see reports.",
+    "admin": "Full access, including crew management."
+  },
+  "table": {
+    "searchPlaceholder": "Search by name or email",
+    "searchLabel": "Search crew",
+    "roleFilterLabel": "Filter by role",
+    "allRoles": "All roles",
+    "peopleCount": "{count} people",
+    "emptyTitle": "No one matches",
+    "emptyDescription": "Try another name or clear the role filter.",
+    "columns": {
+      "member": "Member",
+      "position": "Position",
+      "role": "Role",
+      "status": "Status",
+      "hours": "This month",
+      "actions": "Actions"
+    },
+    "monthHours": "{hours} this month",
+    "status": {
+      "active": "Active",
+      "blocked": "Blocked"
+    }
+  },
+  "actions": {
+    "menuLabel": "Member actions",
+    "changeRole": "Change role",
+    "blockAccess": "Block access",
+    "restoreAccess": "Restore access",
+    "roleChanged": "{name} is now {role}",
+    "accessBlocked": "Access blocked for {name}",
+    "accessRestored": "Access restored for {name}",
+    "blockDialog": {
+      "title": "Block access?",
+      "description": "{name} will be signed out and won't be able to sign in. Their logged time stays in reports.",
+      "confirmButton": "Block access"
+    },
+    "restoreDialog": {
+      "title": "Restore access?",
+      "description": "{name} will be able to sign in and log time again.",
+      "confirmButton": "Restore access"
+    }
+  },
+  "changeRoleDialog": {
+    "title": "Change role",
+    "description": "Update the access level for {name}. It applies on their next sign-in.",
+    "roleLabel": "Role",
+    "cancelButton": "Cancel",
+    "saveButton": "Save role"
+  },
+  "inviteDialog": {
+    "triggerButton": "Invite member",
+    "title": "Invite a teammate",
+    "description": "They will get a sign-in link by email and complete their profile on first visit.",
+    "emailLabel": "Email",
+    "emailPlaceholder": "teammate@softbee.dev",
+    "roleLabel": "Role",
+    "roleDescription": "Managers can approve time and see reports.",
+    "cancelButton": "Cancel",
+    "sendButton": "Send invite",
+    "sendUnavailable": "Available with SBT-12"
+  }
+}

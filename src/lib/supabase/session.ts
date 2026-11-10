@@ -2,7 +2,7 @@ import type { CookieOptions } from '@supabase/ssr';
 import { createServerClient } from '@supabase/ssr';
 import { type NextRequest, NextResponse } from 'next/server';
 
-import { NEXT_PARAM, ROUTES } from '@/constants';
+import { HOME_ROUTE, NEXT_PARAM, ROUTES } from '@/constants';
 import { buildLoginPath, getRouteAccess, getRouteSessionFromClaim, getSafeRedirectPath } from '@/lib/route-access';
 import { Database } from '@/types';
 
@@ -60,7 +60,7 @@ export async function updateSession(request: NextRequest) {
 
   if (access === 'guest-only') {
     // already signed in (e.g. a second tab): finish the deep link instead of the dashboard
-    const nextPath = getSafeRedirectPath(request.nextUrl.searchParams.get(NEXT_PARAM)) ?? ROUTES.DASHBOARD;
+    const nextPath = getSafeRedirectPath(request.nextUrl.searchParams.get(NEXT_PARAM)) ?? HOME_ROUTE;
     return withSessionCookies(supabaseResponse, NextResponse.redirect(new URL(nextPath, request.url)));
   }
 

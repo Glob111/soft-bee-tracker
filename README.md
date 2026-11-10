@@ -136,10 +136,10 @@ Components import hooks from `@/lib/api/<feature>`. They must not call Supabase,
 | Result | Response |
 |--------|----------|
 | No session on a protected route | Redirect to `/login?next=<requested page>`; after sign-in the user lands back there |
-| Signed in on `/login` or `/register` | Redirect to a safe `next` path, else `/dashboard` |
+| Signed in on `/login` | Redirect to a safe `next` path, else `/tracker` |
 | Role not allowed | Rewrite to `/access-denied` (the URL stays the same): status 403 on a page load, 200 on an in-app navigation so the router renders it in place |
 
-Every app page calls `requireRouteAccess(ROUTES.X)` from `@/lib/api/auth/server` at the top of `page.tsx`. It re-runs the proxy's `getRouteAccess` decision with the role from the same verified `user_role` claim, then loads the profile: `getUser()` asks the Auth server (catching revoked sessions that a locally verified JWT can't), and a blocked user or a session without a profile row is sent to `/auth/sign-out`, which clears the cookies and returns to `/login`. No session redirects to `/login`, and a wrong role redirects to `/access-denied`. A session with no role is offered "Sign in again" there, since only a new token carries a new claim.
+Every app page calls `requireRouteAccess(ROUTES.X)` from `@/lib/api/auth/server` at the top of `page.tsx`. It re-runs the proxy's `getRouteAccess` decision with the role from the same verified `user_role` claim, then loads the profile: `getUser()` asks the Auth server (catching revoked sessions that a locally verified JWT can't), and a revoked session or one without a profile row is sent to `/auth/sign-out`, which clears the cookies and returns to `/login`. A blocked user goes through the same route and lands on `/blocked`, which says why. No session redirects to `/login`, and a wrong role redirects to `/access-denied`. A session with no role is offered "Sign in again" there, since only a new token carries a new claim.
 
 The sidebar (`src/components/layout/app-sidebar/app-sidebar.tsx`) uses the same rules and the same claim to hide links a role can't open.
 
@@ -148,7 +148,7 @@ The access rules live in `src/constants/index.ts`: `PUBLIC_ROUTES_LIST`, `GUEST_
 #### Verify route protection
 
 1. `yarn test` runs the route matrix (`src/lib/route-access.test.ts`), the proxy responses and cookie handling (`src/lib/supabase/session.test.ts`), and the page check (`src/lib/api/auth/server.test.ts`).
-2. With `yarn dev` and the seeded [test accounts](#test-accounts): signed out, every app route redirects to `/login`. As `worker@softbee.dev`, `/crew`, `/reports` and `/users` show the access-denied page with status 403, and the sidebar shows only Tracker and Projects. As `manager@softbee.dev`, `/crew` and `/reports` open and only `/users` is denied. As `admin@softbee.dev`, every route opens and the sidebar adds Crew, Reports and Users. Signed out, open `/tracker?tab=week`, sign in, and you land back on it.
+2. With `yarn dev` and the seeded [test accounts](#test-accounts): signed out, every app route redirects to `/login`. As `worker@softbee.dev`, `/crew` and `/reports` show the access-denied page with status 403, and the sidebar shows only Tracker and Projects. As `manager@softbee.dev` or `admin@softbee.dev`, every route opens and the sidebar adds Crew and Reports. `/terms` and `/blocked` open signed out, and a signed-in user can open `/register` (the invite flow). Signed out, open `/tracker?tab=week`, sign in, and you land back on it.
 3. Direct API requests ignore the UI. Sign in through `POST /auth/v1/token?grant_type=password`, then call `/rest/v1/users` with the access token. Each user, any role, sees only their own row, and the anon key sees none.
 
 ### State management
@@ -254,16 +254,19 @@ When you change a shared rule, update every instruction file that states it so t
 
 | Route | Purpose | Access |
 |-------|---------|--------|
-| `/login`, `/register` | Sign in, registration | Signed out only (signed-in users go to `/dashboard`) |
+| `/login` | Sign in | Signed out only (signed-in users go to `/tracker`) |
+| `/register` | Finish an invite (set a password) | Public; the invite link signs the user in first |
 | `/forgot-password`, `/auth/confirm`, `/auth/update-password` | Password recovery and email links | Public |
-| `/access-denied` | Shown when a role can't open a page | Public |
-| `/dashboard` | Post-login landing | Any signed-in role |
+| `/auth/sign-out` | Clears a broken, revoked or blocked session | Public |
+| `/access-denied`, `/blocked` | Shown when a role can't open a page, or the account is blocked | Public |
+| `/terms` | Terms of use | Public |
+| `/`, `/dashboard` | Redirect to `/tracker` | Any signed-in role |
 | `/tracker` | Time tracking | Any signed-in role |
 | `/projects` | Projects (read-only for workers, enforced by RLS) | Any signed-in role |
 | `/profile` | User profile settings | Any signed-in role |
 | `/crew` | Crew management | Manager, admin |
 | `/reports` | Reporting | Manager, admin |
-| `/users` | User administration | Admin |
+| `/users` | Redirects to `/crew` (user management lives there) | Any signed-in role, then Crew's rule |
 
 Any route not listed needs a session; there is no public-by-default route.
 

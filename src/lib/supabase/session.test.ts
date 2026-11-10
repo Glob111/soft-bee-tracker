@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ROUTES } from '@/constants';
+import { HOME_ROUTE, ROUTES } from '@/constants';
 
 interface CookieAdapter {
   setAll: (cookies: { name: string; value: string; options: Record<string, string | number | boolean> }[]) => void;
@@ -66,7 +66,7 @@ describe('updateSession', () => {
     const response = await updateSession(buildRequest(ROUTES.LOGIN));
 
     expect(response.status).toBe(307);
-    expect(response.headers.get('location')).toBe(`http://localhost:3000${ROUTES.DASHBOARD}`);
+    expect(response.headers.get('location')).toBe(`http://localhost:3000${HOME_ROUTE}`);
   });
 
   it('rewrites a denied role to the access-denied page with 403', async () => {
@@ -108,7 +108,7 @@ describe('updateSession', () => {
 
     const response = await updateSession(buildRequest(`${ROUTES.LOGIN}?next=%2F%2Fevil.example`));
 
-    expect(response.headers.get('location')).toBe(`http://localhost:3000${ROUTES.DASHBOARD}`);
+    expect(response.headers.get('location')).toBe(`http://localhost:3000${HOME_ROUTE}`);
   });
 
   it('denies restricted routes when the role claim is missing', async () => {
@@ -121,8 +121,7 @@ describe('updateSession', () => {
 
   it.each([
     ['manager', ROUTES.CREW],
-    ['manager', ROUTES.REPORTS],
-    ['admin', ROUTES.USERS]
+    ['manager', ROUTES.REPORTS]
   ])('passes %s through to %s', async (role, route) => {
     signedInAs(role);
 

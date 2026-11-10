@@ -11,7 +11,7 @@ import {
   type RouteAccess
 } from '@/lib/route-access';
 
-const APP_ROUTES = [ROUTES.DASHBOARD, ROUTES.TRACKER, ROUTES.PROFILE, ROUTES.PROJECTS, ROUTES.CREW, ROUTES.REPORTS, ROUTES.USERS];
+const APP_ROUTES = [ROUTES.DASHBOARD, ROUTES.TRACKER, ROUTES.PROFILE, ROUTES.PROJECTS, ROUTES.CREW, ROUTES.REPORTS];
 
 // the agreed matrix (SBT-49); a change here must be a deliberate product decision
 const EXPECTED_ACCESS: Record<UserRole, Record<string, RouteAccess>> = {
@@ -21,8 +21,7 @@ const EXPECTED_ACCESS: Record<UserRole, Record<string, RouteAccess>> = {
     [ROUTES.PROFILE]: 'allowed',
     [ROUTES.PROJECTS]: 'allowed',
     [ROUTES.CREW]: 'denied',
-    [ROUTES.REPORTS]: 'denied',
-    [ROUTES.USERS]: 'denied'
+    [ROUTES.REPORTS]: 'denied'
   },
   manager: {
     [ROUTES.DASHBOARD]: 'allowed',
@@ -30,8 +29,7 @@ const EXPECTED_ACCESS: Record<UserRole, Record<string, RouteAccess>> = {
     [ROUTES.PROFILE]: 'allowed',
     [ROUTES.PROJECTS]: 'allowed',
     [ROUTES.CREW]: 'allowed',
-    [ROUTES.REPORTS]: 'allowed',
-    [ROUTES.USERS]: 'denied'
+    [ROUTES.REPORTS]: 'allowed'
   },
   admin: {
     [ROUTES.DASHBOARD]: 'allowed',
@@ -39,8 +37,7 @@ const EXPECTED_ACCESS: Record<UserRole, Record<string, RouteAccess>> = {
     [ROUTES.PROFILE]: 'allowed',
     [ROUTES.PROJECTS]: 'allowed',
     [ROUTES.CREW]: 'allowed',
-    [ROUTES.REPORTS]: 'allowed',
-    [ROUTES.USERS]: 'allowed'
+    [ROUTES.REPORTS]: 'allowed'
   }
 };
 
@@ -56,13 +53,14 @@ const ROUTE_CLASSIFICATION: Record<keyof typeof ROUTES, 'public' | readonly User
   UPDATE_PASSWORD: 'public',
   SIGN_OUT: 'public',
   ACCESS_DENIED: 'public',
+  BLOCKED: 'public',
+  TERMS: 'public',
   DASHBOARD: ALL_ROLES,
   PROJECTS: ALL_ROLES,
   TRACKER: ALL_ROLES,
   PROFILE: ALL_ROLES,
   CREW: ['manager', 'admin'],
-  REPORTS: ['manager', 'admin'],
-  USERS: ['admin']
+  REPORTS: ['manager', 'admin']
 };
 
 describe('route classification', () => {
@@ -100,13 +98,12 @@ describe('getRouteAccess', () => {
 
   it('applies restrictions to nested paths but not to lookalike prefixes', () => {
     expect(getRouteAccess('/crew/42', { role: 'worker' })).toBe('denied');
-    expect(getRouteAccess('/users/42/edit', { role: 'manager' })).toBe('denied');
+    expect(getRouteAccess('/reports/2026/11', { role: 'worker' })).toBe('denied');
     expect(getRouteAccess('/crewmates', { role: 'worker' })).toBe('allowed');
   });
 
   it('denies restricted routes when the role claim is missing (fail closed)', () => {
     expect(getRouteAccess(ROUTES.CREW, { role: null })).toBe('denied');
-    expect(getRouteAccess(ROUTES.USERS, { role: null })).toBe('denied');
   });
 
   it('keeps auth routes reachable without a session', () => {
@@ -117,17 +114,24 @@ describe('getRouteAccess', () => {
       ROUTES.AUTH_CONFIRM,
       ROUTES.UPDATE_PASSWORD,
       ROUTES.SIGN_OUT,
-      ROUTES.ACCESS_DENIED
+      ROUTES.ACCESS_DENIED,
+      ROUTES.BLOCKED,
+      ROUTES.TERMS
     ]) {
       expect(getRouteAccess(route, null)).toBe('allowed');
     }
   });
 
-  it('bounces signed-in users away from login and register only', () => {
+  it('bounces signed-in users away from login only', () => {
     expect(getRouteAccess(ROUTES.LOGIN, { role: 'worker' })).toBe('guest-only');
-    expect(getRouteAccess(ROUTES.REGISTER, { role: 'admin' })).toBe('guest-only');
+    expect(getRouteAccess(ROUTES.UPDATE_PASSWORD, { role: 'worker' })).toBe('allowed');
     expect(getRouteAccess(ROUTES.UPDATE_PASSWORD, { role: 'worker' })).toBe('allowed');
     expect(getRouteAccess(ROUTES.ACCESS_DENIED, { role: 'worker' })).toBe('allowed');
+  });
+
+  // an invite link signs the user in; they finish registration while signed in
+  it('keeps register open to a signed-in user for the invite flow', () => {
+    expect(getRouteAccess(ROUTES.REGISTER, { role: 'worker' })).toBe('allowed');
   });
 
   it('lets a session without a role reach sign-out so it can be reset', () => {

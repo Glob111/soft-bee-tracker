@@ -1,0 +1,24 @@
+{
+  "loading": {
+    "label": "Loading"
+  },
+  "durationPicker": {
+    "placeholder": "HH:mm",
+    "listLabel": "Duration"
+  },
+  "passwordInput": {
+    "show": "Show password",
+    "hide": "Hide password"
+  },
+  "datePicker": {
+    "placeholder": "Pick a date"
+  },
+  "errorState": {
+    "title": "Something went wrong",
+    "retryButton": "Try again"
+  },
+  "confirmDialog": {
+    "confirmButton": "Confirm",
+    "cancelButton": "Cancel"
+  }
+}

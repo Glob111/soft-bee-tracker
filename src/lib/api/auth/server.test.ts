@@ -76,7 +76,7 @@ describe('getSessionProfile', () => {
     getUser.mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null });
     single.mockResolvedValue({ data: buildUserRow({ is_blocked: true }), error: null });
 
-    await expect(getSessionProfile()).rejects.toThrow(`NEXT_REDIRECT:${ROUTES.SIGN_OUT}`);
+    await expect(getSessionProfile()).rejects.toThrow(`NEXT_REDIRECT:${ROUTES.SIGN_OUT}?reason=blocked`);
   });
 
   it('returns the profile of an active user', async () => {
@@ -133,9 +133,7 @@ describe('requireRouteAccess', () => {
 
   it.each<[string, UserRole]>([
     [ROUTES.CREW, 'worker'],
-    [ROUTES.REPORTS, 'worker'],
-    [ROUTES.USERS, 'worker'],
-    [ROUTES.USERS, 'manager']
+    [ROUTES.REPORTS, 'worker']
   ])('redirects %s for %s to access denied', async (route, role) => {
     signInAs(role);
 
@@ -152,7 +150,7 @@ describe('requireRouteAccess', () => {
   it.each<[string, UserRole]>([
     [ROUTES.CREW, 'manager'],
     [ROUTES.REPORTS, 'manager'],
-    [ROUTES.USERS, 'admin']
+    [ROUTES.CREW, 'admin']
   ])('allows %s for %s', async (route, role) => {
     signInAs(role);
 
@@ -163,7 +161,7 @@ describe('requireRouteAccess', () => {
   it('resets the session of a blocked user with an allowed role', async () => {
     signInAs('admin', { is_blocked: true });
 
-    await expect(requireRouteAccess(ROUTES.USERS)).rejects.toThrow(`NEXT_REDIRECT:${ROUTES.SIGN_OUT}`);
+    await expect(requireRouteAccess(ROUTES.CREW)).rejects.toThrow(`NEXT_REDIRECT:${ROUTES.SIGN_OUT}?reason=blocked`);
   });
 
   it('lets every role open a session-only page', async () => {

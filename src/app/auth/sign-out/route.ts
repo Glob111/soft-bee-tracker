@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 
-import { ROUTES } from '@/constants';
+import { ROUTES, SIGN_OUT_REASON_BLOCKED, SIGN_OUT_REASON_PARAM } from '@/constants';
 import { createServerClient } from '@/lib/supabase/server';
 
 const SUPABASE_COOKIE_PREFIX = 'sb-';
@@ -15,11 +15,13 @@ export async function GET(request: NextRequest) {
   const supabase = await createServerClient();
   await supabase.auth.signOut({ scope: 'local' });
 
-  const loginUrl = request.nextUrl.clone();
-  loginUrl.pathname = ROUTES.LOGIN;
-  loginUrl.search = '';
+  // a blocked user is told why on /blocked; every other reset goes to login
+  const isBlocked = request.nextUrl.searchParams.get(SIGN_OUT_REASON_PARAM) === SIGN_OUT_REASON_BLOCKED;
+  const targetUrl = request.nextUrl.clone();
+  targetUrl.pathname = isBlocked ? ROUTES.BLOCKED : ROUTES.LOGIN;
+  targetUrl.search = '';
 
-  const response = NextResponse.redirect(loginUrl);
+  const response = NextResponse.redirect(targetUrl);
 
   // signOut drops the cookie it knows; chunked (`...auth-token.0`) or stale
   // sb-* cookies can outlive it and keep the proxy seeing a user

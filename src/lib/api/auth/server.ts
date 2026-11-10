@@ -4,7 +4,7 @@ import { isAuthApiError, isAuthSessionMissingError, type AuthError } from '@supa
 import { redirect } from 'next/navigation';
 import { cache } from 'react';
 
-import { ROUTES } from '@/constants';
+import { ROUTES, SIGN_OUT_REASON_BLOCKED, SIGN_OUT_REASON_PARAM } from '@/constants';
 import { createServerClient } from '@/lib/supabase/server';
 import { mapUserRowToProfile, USER_COLUMNS } from '@/lib/api/auth/mappers';
 import type { UserProfile } from '@/lib/api/auth/types';
@@ -55,7 +55,7 @@ export const getSessionProfile = cache(async (): Promise<UserProfile | null> => 
   // the JWT hook copies user_role only, so the proxy can't see a block; cut a
   // blocked user's live session here, the same way signInWithPassword does
   if (profile.isBlocked) {
-    redirect(ROUTES.SIGN_OUT);
+    redirect(`${ROUTES.SIGN_OUT}?${SIGN_OUT_REASON_PARAM}=${SIGN_OUT_REASON_BLOCKED}`);
   }
 
   return profile;
