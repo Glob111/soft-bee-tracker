@@ -1,3 +1,4 @@
+import { AuthApiError, AuthRetryableFetchError, AuthSessionMissingError } from '@supabase/supabase-js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ROUTES } from '@/constants';
@@ -37,6 +38,31 @@ describe('getSessionProfile', () => {
 
     await expect(getSessionProfile()).resolves.toBeNull();
     expect(single).not.toHaveBeenCalled();
+  });
+
+  it('returns null without a session cookie', async () => {
+    getUser.mockResolvedValue({ data: { user: null }, error: new AuthSessionMissingError() });
+
+    await expect(getSessionProfile()).resolves.toBeNull();
+  });
+
+  it.each([401, 403])('returns null when the Auth server rejects the JWT with %i', async (status) => {
+    getUser.mockResolvedValue({ data: { user: null }, error: new AuthApiError('session not found', status, 'session_not_found') });
+
+    await expect(getSessionProfile()).resolves.toBeNull();
+  });
+
+  it('throws instead of signing out when the Auth server is unreachable', async () => {
+    getUser.mockResolvedValue({ data: { user: null }, error: new AuthRetryableFetchError('fetch failed', 0) });
+
+    await expect(getSessionProfile()).rejects.toEqual({ message: 'fetch failed', statusCode: 503 });
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
+  it('throws instead of signing out on an Auth server 5xx', async () => {
+    getUser.mockResolvedValue({ data: { user: null }, error: new AuthApiError('upstream error', 502, 'unexpected_failure') });
+
+    await expect(getSessionProfile()).rejects.toEqual({ message: 'upstream error', statusCode: 502 });
   });
 
   it('resets the session when the profile row is missing', async () => {
@@ -117,6 +143,7 @@ describe('requireRouteAccess', () => {
   });
 
   it('redirects to access denied when the claim is missing', async () => {
+    signInAs('worker');
     getClaims.mockResolvedValue({ data: { claims: { sub: 'user-1' } }, error: null });
 
     await expect(requireRouteAccess(ROUTES.CREW)).rejects.toThrow(`NEXT_REDIRECT:${ROUTES.ACCESS_DENIED}`);
@@ -149,16 +176,22 @@ describe('requireRouteAccess', () => {
   // bounces /login back to the app
   it('resets the session when the Auth server rejects a still-valid JWT', async () => {
     signInAs('worker');
-    getUser.mockResolvedValue({ data: { user: null }, error: new Error('session revoked') });
+    getUser.mockResolvedValue({ data: { user: null }, error: new AuthApiError('session not found', 403, 'session_not_found') });
 
     await expect(requireRouteAccess(ROUTES.DASHBOARD)).rejects.toThrow(`NEXT_REDIRECT:${ROUTES.SIGN_OUT}`);
   });
 
-  it('checks the role before loading the profile', async () => {
-    signInAs('worker');
+  it('signs out a blocked user on a restricted page instead of showing access denied', async () => {
+    signInAs('worker', { is_blocked: true });
 
-    await expect(requireRouteAccess(ROUTES.CREW)).rejects.toThrow(`NEXT_REDIRECT:${ROUTES.ACCESS_DENIED}`);
-    expect(single).not.toHaveBeenCalled();
+    await expect(requireRouteAccess(ROUTES.CREW)).rejects.toThrow(`NEXT_REDIRECT:${ROUTES.SIGN_OUT}`);
+  });
+
+  it('signs out a revoked session on a restricted page instead of showing access denied', async () => {
+    signInAs('worker');
+    getUser.mockResolvedValue({ data: { user: null }, error: new AuthApiError('session not found', 403, 'session_not_found') });
+
+    await expect(requireRouteAccess(ROUTES.CREW)).rejects.toThrow(`NEXT_REDIRECT:${ROUTES.SIGN_OUT}`);
   });
 });
 
