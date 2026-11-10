@@ -1,0 +1,10 @@
+{
+  "signInRequired": "Sign in again to invite teammates.",
+  "notAllowed": "Your role can't invite teammates.",
+  "roleNotAllowed": "Your role can't invite someone as {role}.",
+  "invalidInput": "Check the highlighted fields.",
+  "alreadyMember": "{email} already has an account.",
+  "alreadyInvited": "{email} has already been invited and hasn't accepted yet.",
+  "readyToSend": "{email} can be invited. Sending invites arrives with SBT-55.",
+  "unexpectedError": "We couldn't check this invite. Try again in a moment."
+}

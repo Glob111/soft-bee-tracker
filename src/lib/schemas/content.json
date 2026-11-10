@@ -37,5 +37,8 @@
     "durationPositive": "Duration must be greater than zero",
     "durationMax": "Duration can be at most 24 hours",
     "descriptionTooLong": "Description can be at most 500 characters"
+  },
+  "invite": {
+    "roleRequired": "Choose a role"
   }
 }
