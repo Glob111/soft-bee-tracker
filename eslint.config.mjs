@@ -46,9 +46,7 @@ const eslintConfig = defineConfig([
   {
     // Client-reachable layers must never import server-only modules (secret key, next/headers).
     files: ['src/components/**/*.{ts,tsx}', 'src/hooks/**/*.{ts,tsx}', 'src/providers/**/*.{ts,tsx}', 'src/lib/api/**/*.{ts,tsx}'],
-    // actions.ts holds 'use server' functions: they run only on the server, and
-    // client code imports them as references, so they may use server modules
-    ignores: ['src/lib/api/**/server.ts', 'src/lib/api/**/actions.ts'],
+    ignores: ['src/lib/api/**/server.ts'],
     rules: {
       '@typescript-eslint/no-restricted-imports': [
         'error',

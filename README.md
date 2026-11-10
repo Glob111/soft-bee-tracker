@@ -125,30 +125,9 @@ src/lib/api/users/
   mutations.ts   # Write helpers
   types.ts       # Optional aliases and Pick/Omit of generated database types
   mappers.ts     # Only when a value changes at runtime
-  actions.ts     # Optional 'use server' actions for privileged server work
 ```
 
 Components import hooks from `@/lib/api/<feature>`. They must not call Supabase, `fetch`, or Axios directly. Domain types alias generated database types. A mapper exists only when a value changes at runtime. See `.cursor/rules/lib-services.mdc`.
-
-`actions.ts` holds server actions (`'use server'` must be its first line). Client hooks import them; Next.js sends the browser a reference, not the code. Besides `server.ts`, it is the only `lib/api` file allowed to import server-only modules such as the service client, and `src/lib/api/actions-directive.test.ts` fails if the directive is missing.
-
-### Invitations
-
-Admins and managers invite teammates from the Crew page (SBT-54). `getInvitableRoles` in `src/lib/api/invites/permissions.ts` decides who may assign which role, from the verified `user_role` claim: admins any role, managers only workers, workers nobody. The dialog only shows the allowed roles; the `inviteMember` server action (`src/lib/api/invites/actions.ts`) re-checks everything on each call:
-
-1. a live, unblocked session whose role may invite;
-2. the email and role, with the same zod schema as the form (the email is trimmed and lowercased);
-3. the requested role is one this inviter may assign;
-4. the email has no account (`email_confirmed_at` set) and no open invite.
-
-When every check passes it returns `not-sent`: sending through Supabase is SBT-55.
-
-To verify, run `yarn test`, then with `yarn dev` open `/crew`:
-
-- As `admin@softbee.dev`, the role picker offers Staff, Manager and Admin. `not-an-email` shows a field error, `worker@softbee.dev` says the account exists, and a new address passes the checks.
-- As `manager@softbee.dev`, the picker offers only Staff.
-- As `worker@softbee.dev`, `/crew` is denied and there is no Invite button.
-- For a repeat invite, create a pending one locally (`POST /auth/v1/invite` with the service role key), invite the same address, and delete the user afterwards.
 
 ### Route protection
 
